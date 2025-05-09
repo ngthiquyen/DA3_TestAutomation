@@ -1,5 +1,7 @@
 package tests;
 
+import com.aventstack.extentreports.ExtentReports;
+import com.aventstack.extentreports.ExtentTest;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -11,8 +13,11 @@ import utils.ExcelUtils;
 import java.time.Duration;
 import java.util.List;
 import org.testng.Assert;
+import utils.ExtendReportsManager;
 
 public class LoginTest {
+    private ExtendReportsManager ExtentReportManager;
+    ExtentReports extent = ExtentReportManager.getReportInstance();
     @Test
     public void testLoginWithExcel() {
         List<String[]> testData = ExcelUtils.readExcelData(
@@ -26,6 +31,7 @@ public class LoginTest {
             System.out.println("Testing: username = [" + username + "], password = [" + password + "]");
 
             WebDriver driver = null;
+            ExtentTest test = extent.createTest("Test login: " + username);
 
             try {
                 System.setProperty("webdriver.chrome.driver",
@@ -36,6 +42,7 @@ public class LoginTest {
 
                 LoginPage loginPage = new LoginPage(driver);
                 loginPage.login(username, password);
+                test.info("Đã nhập username và password");
 
                 WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
                 WebElement welcomeText = wait.until(ExpectedConditions.visibilityOfElementLocated(
@@ -59,8 +66,10 @@ public class LoginTest {
                 }
             }
         }
+
+        extent.flush(); // Ghi báo cáo sau khi xong toàn bộ test
         // Sau khi chạy xong tất cả test
-        System.out.println("✅ Tất cả trường hợp đã được kiểm thử. Mở file Excel để xem log.");
+        System.out.println("Tất cả trường hợp đã được kiểm thử. Mở file Excel để xem log.");
         ExcelLogger.openLogFile();
     }
 }

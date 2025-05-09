@@ -54,6 +54,12 @@
             <version>7.9.0</version> <!-- hoặc bản ổn định gần nhất -->
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.aventstack</groupId>
+            <artifactId>extentreports</artifactId>
+            <version>5.0.9</version>
+        </dependency>
     </dependencies>
 
 </project>
