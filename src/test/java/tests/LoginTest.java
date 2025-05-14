@@ -6,7 +6,6 @@ import com.aventstack.extentreports.ExtentTest;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 import pages.LoginPage;
 import utils.ExcelLogger;
@@ -21,16 +20,16 @@ public class LoginTest extends BaseTest {
 
     @Test
     public void testLoginWithExcel() {
-        List<String[]> testData = ExcelUtils.readExcelData(
-                "src/test/java/resources/Data.xlsx", "Sheet1");
+        List<String[]> testData = ExcelUtils.readExcelData("src/test/java/resources/Data_Test.xlsx", "Sheet1");
 
         for (String[] data : testData) {
-            String username = data.length > 0 ? data[0] : "";
-            String password = data.length > 1 ? data[1] : "";
+            String username = data.length > 0 ? data[0].trim() : "";
+            String password = data.length > 1 ? data[1].trim() : "";
+            String expectedResult = data.length > 2 ? data[2].trim() : "";
 
-            System.out.println("Testing: username = [" + username + "], password = [" + password + "]");
+            System.out.println("Đang kiểm tra: username = [" + username + "], password = [" + password + "]");
 
-            ExtentTest test = extent.createTest("Test login: " + username);
+            ExtentTest test = extent.createTest("Kiểm tra đăng nhập: " + username);
 
             driver.get("https://dipsoul.vn/account/login");
             LoginPage loginPage = new LoginPage(driver);
@@ -39,63 +38,66 @@ public class LoginTest extends BaseTest {
             WebElement passwordInput = loginPage.getPasswordInput();
             WebElement loginBtn = loginPage.getLoginButton();
 
-            // Trường hợp để trống username hoặc password
-            if (username.isEmpty() || password.isEmpty()) {
-                if (!username.isEmpty()) {
-                    emailInput.sendKeys(username);
-                }
-                if (!password.isEmpty()) {
-                    passwordInput.sendKeys(password);
-                }
+            // Xóa trước mỗi lần chạy
+            emailInput.clear();
+            passwordInput.clear();
 
-                loginBtn.click();
+            if (!username.isEmpty()) emailInput.sendKeys(username);
+            if (!password.isEmpty()) passwordInput.sendKeys(password);
 
-                JavascriptExecutor js = (JavascriptExecutor) driver;
-                boolean isEmailValid = (Boolean) js.executeScript("return arguments[0].checkValidity();", emailInput);
-                boolean isPasswordValid = (Boolean) js.executeScript("return arguments[0].checkValidity();", passwordInput);
+            loginBtn.click();
 
-                if (!isEmailValid || !isPasswordValid) {
-                    String errorMessage = "";
-                    if (!isEmailValid) errorMessage += "Vui lòng điền vào trường này. ";
-                    if (!isPasswordValid) errorMessage += "Vui lòng điền vào trường này.";
+            String actualResult = "";
 
-                    System.out.println("Thông báo lỗi : " + errorMessage);
-                    ExcelLogger.logResult("Login", username, password, "Lỗi - " + errorMessage);
-                    test.fail("Lỗi - " + errorMessage);
-                } else {
-                    System.out.println("Không hiển thị lỗi khi để trống.");
-                    ExcelLogger.logResult("Login", username, password, "Không có cảnh báo khi để trống");
-                    test.warning("Không có cảnh báo khi để trống");
-                }
-                continue;
-            }
-
-            // Trường hợp có đủ dữ liệu
             try {
-                loginPage.login(username, password);
-                test.info("Đã nhập username và password");
+                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
-                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+                // TH1: Kiểm tra nếu đăng nhập thành công
                 WebElement welcomeText = wait.until(ExpectedConditions.visibilityOfElementLocated(
                         By.xpath("//p/span[contains(text(), 'Nguyễn Thị Quyên')]")));
 
-                String actualText = welcomeText.getText().trim();
-                Assert.assertEquals(actualText, "Nguyễn Thị Quyên", "Tên hiển thị không đúng sau khi đăng nhập");
-
-                System.out.println("Đăng nhập thành công với tài khoản: " + username);
-                ExcelLogger.logResult("Login", username, password, "Đăng nhập thành công");
-                test.pass("Đăng nhập thành công");
+                actualResult = welcomeText.getText().trim();
+                test.pass("Đăng nhập thành công: " + actualResult);
 
             } catch (TimeoutException e) {
-                System.out.println("Sai thông tin đăng nhập: " + username);
-                ExcelLogger.logResult("Login", username, password, "Sai thông tin đăng nhập");
-                test.fail("Sai thông tin đăng nhập");
+                // TH2: Không đăng nhập được, kiểm tra lỗi hiển thị
+                try {
+                    List<WebElement> errorMessages = driver.findElements(By.cssSelector(".form-signup"));
+                    StringBuilder errors = new StringBuilder();
 
-            } catch (Exception e) {
-                System.out.println("Lỗi hệ thống với tài khoản: " + username);
-                ExcelLogger.logResult("Login", username, password, "Lỗi: " + e.getMessage());
-                test.fail("Lỗi bất ngờ: " + e.getMessage());
+                    for (WebElement msg : errorMessages) {
+                        if (msg.isDisplayed() && !msg.getText().trim().isEmpty()) {
+                            errors.append(msg.getText().trim());
+                        }
+                    }
+
+                    if (errors.length() > 0) {
+                        actualResult = errors.toString().replaceAll(" \\| $", "");
+                        test.fail("Thông báo lỗi: " + actualResult);
+                    } else {
+                        // TH3: Trường input bị bỏ trống hoặc sai định dạng
+                        JavascriptExecutor js = (JavascriptExecutor) driver;
+                        boolean isEmailValid = (Boolean) js.executeScript("return arguments[0].checkValidity();", emailInput);
+                        boolean isPasswordValid = (Boolean) js.executeScript("return arguments[0].checkValidity();", passwordInput);
+
+                        if (!isEmailValid || !isPasswordValid) {
+                            actualResult = "Vui lòng điền vào trường này.";
+                            test.fail("Thiếu dữ liệu: " + actualResult);
+                        } else {
+                            actualResult = "Thông tin đăng nhập không chính xác.";
+                            test.fail(actualResult);
+                        }
+                    }
+
+                } catch (Exception ex) {
+                    actualResult = "Lỗi không xác định: " + ex.getMessage();
+                    test.fail(actualResult);
+                }
             }
+
+            // Ghi log kết quả
+            String status = actualResult.equalsIgnoreCase(expectedResult) ? "Pass" : "Fail";
+            ExcelLogger.logResult("Login", username, password, actualResult, expectedResult, status);
         }
 
         extent.flush();

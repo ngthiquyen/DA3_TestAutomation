@@ -45,15 +45,15 @@ public class SearchTest extends BaseTest {
 
                 if (results.size() > 0) {
                     test.pass("Tìm thấy " + results.size() + " sản phẩm với từ khóa: " + keyword);
-                    ExcelLogger.logResult("Sheet2", keyword, "", "Tìm thấy sản phẩm");
+             //       ExcelLogger.logResult("Sheet2", keyword, "", "Tìm thấy sản phẩm");
                 } else {
                     test.fail("Không tìm thấy sản phẩm với từ khóa: " + keyword);
-                    ExcelLogger.logResult("Sheet2", keyword, "", "Không tìm thấy sản phẩm");
+               //     ExcelLogger.logResult("Sheet2", keyword, "", "Không tìm thấy sản phẩm");
                 }
 
             } catch (Exception e) {
                 test.fail("Lỗi khi tìm kiếm: " + e.getMessage());
-                ExcelLogger.logResult("Sheet2", keyword, "", "Lỗi - \" + e.getMessage()");
+             //   ExcelLogger.logResult("Sheet2", keyword, "", "Lỗi - \" + e.getMessage()");
 
             }
         }

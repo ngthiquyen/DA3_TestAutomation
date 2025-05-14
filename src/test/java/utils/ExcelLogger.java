@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class ExcelLogger {
-    private static final String LOG_FILE = "src/test/java/resources/TestResults.xlsx";
+    private static final String LOG_FILE = "src/test/java/resources/Test_Results.xlsx";
     private static Workbook workbook;
     private static File logFile;
 
@@ -30,7 +30,7 @@ public class ExcelLogger {
         }
     }
 
-    public static void logResult(String sheetName, String col1, String col2, String col3) {
+    public static void logResult(String sheetName, String col1, String col2, String actualResult, String expectedResult, String status) {
         try {
             Sheet sheet = workbook.getSheet(sheetName);
             if (sheet == null) {
@@ -39,7 +39,9 @@ public class ExcelLogger {
                 header.createCell(0).setCellValue("Thời gian");
                 header.createCell(1).setCellValue("Thông tin 1");
                 header.createCell(2).setCellValue("Thông tin 2");
-                header.createCell(3).setCellValue("Kết quả");
+                header.createCell(3).setCellValue("Kết quả thực tế");
+                header.createCell(4).setCellValue("Kết quả mong muốn");
+                header.createCell(5).setCellValue("Trạng thái");
             }
 
             int currentRow = sheet.getLastRowNum() + 1;
@@ -49,7 +51,9 @@ public class ExcelLogger {
             row.createCell(0).setCellValue(LocalDateTime.now().format(formatter));
             row.createCell(1).setCellValue(col1);
             row.createCell(2).setCellValue(col2);
-            row.createCell(3).setCellValue(col3);
+            row.createCell(3).setCellValue(actualResult);
+            row.createCell(4).setCellValue(expectedResult);
+            row.createCell(5).setCellValue(status);
 
             FileOutputStream fos = new FileOutputStream(logFile);
             workbook.write(fos);
