@@ -1,8 +1,6 @@
 package utils;
 
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.*;
@@ -30,7 +28,11 @@ public class ExcelLogger {
         }
     }
 
-    public static void logResult(String sheetName, String col1, String col2, String actualResult, String expectedResult, String status) {
+    /**
+     * Hàm dùng cho LoginTest – ghi log gồm 6 cột cố định
+     */
+    public static void logResult(String sheetName, String col1, String col2,
+                                 String actualResult, String expectedResult, String status) {
         try {
             Sheet sheet = workbook.getSheet(sheetName);
             if (sheet == null) {
@@ -46,8 +48,8 @@ public class ExcelLogger {
 
             int currentRow = sheet.getLastRowNum() + 1;
             Row row = sheet.createRow(currentRow);
-
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
             row.createCell(0).setCellValue(LocalDateTime.now().format(formatter));
             row.createCell(1).setCellValue(col1);
             row.createCell(2).setCellValue(col2);
@@ -55,12 +57,48 @@ public class ExcelLogger {
             row.createCell(4).setCellValue(expectedResult);
             row.createCell(5).setCellValue(status);
 
-            FileOutputStream fos = new FileOutputStream(logFile);
-            workbook.write(fos);
-            fos.close();
-
-        } catch (IOException e) {
+            save();
+        } catch (Exception e) {
             System.out.println("Không thể ghi log vào Excel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Hàm dùng cho các test như SearchTest – ghi log với tiêu đề và giá trị tùy chỉnh
+     */
+    public static void logCustomRow(String sheetName, String[] headers, String[] values) {
+        try {
+            Sheet sheet = workbook.getSheet(sheetName);
+            boolean isNewSheet = false;
+
+            if (sheet == null) {
+                sheet = workbook.createSheet(sheetName);
+                isNewSheet = true;
+            }
+
+            if (isNewSheet) {
+                Row headerRow = sheet.createRow(0);
+                for (int i = 0; i < headers.length; i++) {
+                    headerRow.createCell(i).setCellValue(headers[i]);
+                }
+            }
+
+            int currentRow = sheet.getLastRowNum() + 1;
+            Row row = sheet.createRow(currentRow);
+
+            for (int i = 0; i < values.length; i++) {
+                row.createCell(i).setCellValue(values[i]);
+            }
+
+            save();
+        } catch (Exception e) {
+            System.out.println("Không thể ghi log tuỳ chỉnh: " + e.getMessage());
+        }
+    }
+
+    private static void save() throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(logFile)) {
+            workbook.write(fos);
         }
     }
 

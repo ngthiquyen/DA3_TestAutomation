@@ -20,7 +20,7 @@ public class LoginTest extends BaseTest {
 
     @Test
     public void testLoginWithExcel() {
-        List<String[]> testData = ExcelUtils.readExcelData("src/test/java/resources/Data_Test.xlsx", "Sheet1");
+        List<String[]> testData = ExcelUtils.readExcelData("src/test/java/resources/Data_Test.xlsx", "Login");
 
         for (String[] data : testData) {
             String username = data.length > 0 ? data[0].trim() : "";
@@ -67,22 +67,27 @@ public class LoginTest extends BaseTest {
 
                     if (pageText.contains("Thông tin đăng nhập không chính xác")) {
                         actualResult = "Thông tin đăng nhập không chính xác.";
-                        test.fail(actualResult);
                     } else if (pageText.contains("Vui lòng điền vào trường này")) {
                         actualResult = "Vui lòng điền vào trường này.";
-                        test.fail(actualResult);
                     } else if (username.isEmpty() || password.isEmpty()) {
                         actualResult = "Vui lòng điền vào trường này.";
-                        test.fail("Thiếu dữ liệu: " + actualResult);
-                    } else {
+                    }
+                    else {
                         actualResult = "Thông tin đăng nhập không chính xác.";
-                        test.fail(actualResult);
                     }
 
                 } catch (Exception ex) {
                     actualResult = "Lỗi không xác định: " + ex.getMessage();
                     test.fail(actualResult);
                 }
+            }
+            // Ghi vào ExtentReport dựa trên actual vs expected
+            if (actualResult.equalsIgnoreCase(expectedResult)) {
+                test.pass("\n Username: " + username +
+                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
+            } else {
+                test.fail(" \n Username: " + username +
+                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
             }
 
 
