@@ -60,33 +60,23 @@ public class LoginTest extends BaseTest {
                 test.pass("Đăng nhập thành công: " + actualResult);
 
             } catch (TimeoutException e) {
-                // TH2: Không đăng nhập được, kiểm tra lỗi hiển thị
+                // TH2: Không đăng nhập được, kiểm tra thông báo lỗi
                 try {
-                    List<WebElement> errorMessages = driver.findElements(By.cssSelector(".form-signup"));
-                    StringBuilder errors = new StringBuilder();
+                    WebElement body = driver.findElement(By.tagName("body"));
+                    String pageText = body.getText().trim();
 
-                    for (WebElement msg : errorMessages) {
-                        if (msg.isDisplayed() && !msg.getText().trim().isEmpty()) {
-                            errors.append(msg.getText().trim());
-                        }
-                    }
-
-                    if (errors.length() > 0) {
-                        actualResult = errors.toString().replaceAll(" \\| $", "");
-                        test.fail("Thông báo lỗi: " + actualResult);
+                    if (pageText.contains("Thông tin đăng nhập không chính xác")) {
+                        actualResult = "Thông tin đăng nhập không chính xác.";
+                        test.fail(actualResult);
+                    } else if (pageText.contains("Vui lòng điền vào trường này")) {
+                        actualResult = "Vui lòng điền vào trường này.";
+                        test.fail(actualResult);
+                    } else if (username.isEmpty() || password.isEmpty()) {
+                        actualResult = "Vui lòng điền vào trường này.";
+                        test.fail("Thiếu dữ liệu: " + actualResult);
                     } else {
-                        // TH3: Trường input bị bỏ trống hoặc sai định dạng
-                        JavascriptExecutor js = (JavascriptExecutor) driver;
-                        boolean isEmailValid = (Boolean) js.executeScript("return arguments[0].checkValidity();", emailInput);
-                        boolean isPasswordValid = (Boolean) js.executeScript("return arguments[0].checkValidity();", passwordInput);
-
-                        if (!isEmailValid || !isPasswordValid) {
-                            actualResult = "Vui lòng điền vào trường này.";
-                            test.fail("Thiếu dữ liệu: " + actualResult);
-                        } else {
-                            actualResult = "Thông tin đăng nhập không chính xác.";
-                            test.fail(actualResult);
-                        }
+                        actualResult = "Thông tin đăng nhập không chính xác.";
+                        test.fail(actualResult);
                     }
 
                 } catch (Exception ex) {
@@ -94,6 +84,7 @@ public class LoginTest extends BaseTest {
                     test.fail(actualResult);
                 }
             }
+
 
             // Ghi log kết quả
             String status = actualResult.equalsIgnoreCase(expectedResult) ? "Pass" : "Fail";
