@@ -33,7 +33,7 @@ public class ExtendReportsManager {
         // Cấu hình Spark Reporter
         ExtentSparkReporter spark = new ExtentSparkReporter(reportPath);
         spark.config().setDocumentTitle("Báo cáo kiểm thử tự động");
-        spark.config().setReportName("Kết quả kiểm thử đăng nhập");
+        spark.config().setReportName("Kết quả kiểm thử ");
         spark.config().setTheme(Theme.STANDARD); // Có thể chọn DARK nếu muốn
 
         // Tạo instance chính

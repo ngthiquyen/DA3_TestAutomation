@@ -67,12 +67,12 @@ public class LoginTest extends BaseTest {
 
                     if (pageText.contains("Thông tin đăng nhập không chính xác")) {
                         actualResult = "Thông tin đăng nhập không chính xác.";
-                    } else if (pageText.contains("Vui lòng điền vào trường này")) {
+                    } else if (pageText.contains("Vui lòng điền vào trường này.")) {
                         actualResult = "Vui lòng điền vào trường này.";
-                    } else if (username.isEmpty() || password.isEmpty()) {
+                    } else if (username.isEmpty() || password.isEmpty() ) {
                         actualResult = "Vui lòng điền vào trường này.";
-                    }
-                    else {
+                    }else
+                    {
                         actualResult = "Thông tin đăng nhập không chính xác.";
                     }
 

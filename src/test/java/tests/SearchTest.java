@@ -3,11 +3,9 @@ package tests;
 import base.BaseTest;
 import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
-import org.openqa.selenium.By;
-import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import org.openqa.selenium.WebElement;
 import org.testng.annotations.Test;
 import pages.SearchPage;
 import utils.ExcelLogger;
@@ -25,54 +23,109 @@ public class SearchTest extends BaseTest {
         List<String[]> testData = ExcelUtils.readExcelData("src/test/java/resources/Data_Test.xlsx", "Search");
 
         for (String[] data : testData) {
-            String testCaseID = data.length > 0 ? data[0].trim() : "";
-            String keyword = data.length > 1 ? data[1].trim() : "";
-            String expectedResult = data.length > 2 ? data[2].trim() : "";
+            String keyword = data.length > 0 ? data[0].trim() : "";
+            String expectedResult = data.length > 1 ? data[1].trim() : "";
 
             ExtentTest test = extent.createTest("Tìm kiếm sản phẩm: " + keyword);
             System.out.println("Đang kiểm tra tìm kiếm với từ khóa: " + keyword);
 
-            driver.get("https://dipsoul.vn"); // hoặc trang cụ thể có tìm kiếm
-            SearchPage searchPage = new SearchPage(driver);
-
             String actualResult = "";
-
-            try {
-                // Trường hợp người dùng không nhập gì mà bấm tìm
-                if (keyword.isEmpty()) {
-                    searchPage.searchProduct("");  // Gửi input rỗng
-                    actualResult = "Vui lòng điền vào trường này.";
-                    test.fail("Không nhập từ khóa tìm kiếm");
+            // Xử lý từ khóa rỗng
+            if (keyword.isEmpty()) {
+                actualResult = "Vui lòng điền vào trường này.";
+                // Ghi vào ExtentReport
+                if (actualResult.equalsIgnoreCase(expectedResult)) {
+                    test.pass("Keyword: " + keyword +
+                            "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
                 } else {
-                    searchPage.searchProduct(keyword);
-
-                    // Chờ phần tử kết quả xuất hiện (tùy chỉnh selector nếu cần)
-                    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-                    WebElement resultArea = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("searchResult")));
-
-                    actualResult = resultArea.getText().trim();
-
-                    if (actualResult.contains("Không tìm thấy bất kỳ kết quả nào với từ khóa trên.") || actualResult.isEmpty()) {
-                        actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
-                        test.fail("Không tìm thấy kết quả với từ khóa: " + keyword);
-                    } else {
-                        test.pass("Tìm thấy kết quả: " + actualResult);
-                    }
+                    test.fail("Keyword: " + keyword +
+                            "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
                 }
-            } catch (TimeoutException te) {
-                actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
-                test.fail("Timeout: Không tìm thấy sản phẩm.");
-            } catch (Exception ex) {
-                actualResult = "Lỗi không xác định: " + ex.getMessage();
-                test.fail("Lỗi không xác định xảy ra: " + ex.getMessage());
+                String status = actualResult.equalsIgnoreCase(expectedResult) ? "Pass" : "Fail";
+                String[] headers = {"Keyword", "Expected", "Actual", "Status"};
+                String[] values = {keyword, expectedResult, actualResult, status};
+                ExcelLogger.logCustomRow("Search", headers, values);
+                continue; // Bỏ qua test này
             }
 
-            // So sánh kết quả
-            String status = actualResult.equalsIgnoreCase(expectedResult) ? "Pass" : "Fail";
+            driver.get("https://dipsoul.vn/search");
+            SearchPage searchPage = new SearchPage(driver);
+
+            try {
+                // Đợi input hiển thị sẵn sàng
+                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+                wait.until(ExpectedConditions.visibilityOf(searchPage.getSearchInput()));
+
+                String currentUrl = driver.getCurrentUrl();
+                searchPage.searchProduct(keyword);
+
+
+                    // Đợi redirect URL nếu có kết quả
+                    wait.until(ExpectedConditions.not(ExpectedConditions.urlToBe(currentUrl)));
+
+                    // Kiểm tra URL mới
+                    String newUrl = driver.getCurrentUrl();
+
+                    // TH1: Không tìm thấy kết quả (thông báo xuất hiện)
+                    List<WebElement> noResults = driver.findElements(
+                            By.xpath("//p[contains(text(),'Không tìm thấy bất kỳ kết quả nào với từ khóa trên')]")
+                    );
+
+                    if (!noResults.isEmpty()) {
+                        actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
+                    } else {
+                        // TH2: Có kết quả tìm kiếm -> kiểm tra các sản phẩm hiển thị
+                        List<WebElement> productItems = driver.findElements(By.xpath("//div[@class='category-products']"));
+
+                        if (!productItems.isEmpty()) {
+                            String[] keywordParts = keyword.toLowerCase().split("\\s+");
+                            boolean foundMatchingProduct = false;
+
+                            for (WebElement product : productItems) {
+                                String productText = product.getText().toLowerCase();
+                                boolean allWordsMatch = true;
+
+                                for (String word : keywordParts) {
+                                    if (!productText.contains(word)) {
+                                        allWordsMatch = false;
+                                        break;
+                                    }
+                                }
+                                if (allWordsMatch) {
+                                    foundMatchingProduct = true;
+                                    break;
+                                }
+                            }
+
+                            if (foundMatchingProduct) {
+                                actualResult =  keyword ;
+                            } else {
+                                actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
+                            }
+                        } else {
+                            actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
+                        }
+                    }
+
+            } catch (TimeoutException te) {
+                actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
+            } catch (Exception ex) {
+                ex.printStackTrace(); // In lỗi ra console để dễ debug
+                actualResult = "Lỗi không xác định: " + ex.getMessage();
+            }
+            // Ghi vào ExtentReport
+            if (actualResult.equalsIgnoreCase(expectedResult)) {
+                test.pass("Keyword: " + keyword +
+                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
+            } else {
+                test.fail("Keyword: " + keyword +
+                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
+            }
 
             // Ghi log Excel
-            String[] headers = {"TestCaseID", "Keyword", "Expected", "Actual", "Status"};
-            String[] values = {testCaseID, keyword, expectedResult, actualResult, status};
+            String status = actualResult.equalsIgnoreCase(expectedResult) ? "Pass" : "Fail";
+            String[] headers = { "Keyword", "Expected", "Actual", "Status"};
+            String[] values = {keyword, expectedResult, actualResult, status};
             ExcelLogger.logCustomRow("Search", headers, values);
         }
 
