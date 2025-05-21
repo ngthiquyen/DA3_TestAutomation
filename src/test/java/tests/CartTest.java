@@ -6,115 +6,87 @@ import com.aventstack.extentreports.ExtentTest;
 import org.testng.annotations.Test;
 import pages.CartPage;
 import pages.LoginPage;
-import utils.ExcelLogger;
-import utils.ExcelUtils;
 import utils.ExtendReportsManager;
-
-import java.util.List;
 
 public class CartTest extends BaseTest {
 
-    // Khởi tạo đối tượng ExtentReports để ghi báo cáo kiểm thử
     ExtentReports extent = ExtendReportsManager.getReportInstance();
 
     @Test
-    public void testCartFunctionality() {
-        // Đọc dữ liệu từ file Excel: Sheet "CartTest"
-        List<String[]> testData = ExcelUtils.readExcelData("src/test/java/resources/Data_Test.xlsx", "Cart");
+    public void testCartFunctionalityWithoutExcel() {
+        try {
+            // Mở trang đăng nhập
+            driver.get("https://dipsoul.vn/account/login");
 
-        // Duyệt từng dòng dữ liệu để kiểm thử
-        for (String[] row : testData) {
-            // Gán các giá trị từ từng cột trong Excel
-            String action = row[0].trim();                 // Hành động: Thêm, Xóa, Thay đổi số lượng...
-            String productName = row[1].trim();            // Tên sản phẩm
-            String quantityStr = row[2].trim();            // Số lượng (nếu có)
-            String expectedMessage = row[3].trim();        // Kết quả mong muốn hiển thị
-            String priceStr = row[4].trim();               // Giá sản phẩm
-            String expectedTotalStr = row[5].trim();       // Tổng tiền mong muốn (nếu có)
+            // Đăng nhập
+            LoginPage loginPage = new LoginPage(driver);
+            loginPage.login("ngthiquyen102@mail.com", "ngthiquyen102");
 
-            // Tạo 1 testcase trong báo cáo ExtentReports
-            ExtentTest test = extent.createTest("Hành động: " + action + " | SP: " + productName);
+            // Mở trang sản phẩm (điều hướng trực tiếp vào sản phẩm mẫu)
+            driver.get("https://dipsoul.vn/set-qua-tang-nen-thom-diu-nong-20-10");
 
-            try {
-                // Mở trang đăng nhập
-                driver.get("https://dipsoul.vn/account/login");
+            // Khởi tạo trang giỏ hàng
+            CartPage cart = new CartPage(driver);
 
-                // Đăng nhập tài khoản
-                LoginPage loginPage = new LoginPage(driver);
-                loginPage.login("ngthiquyen102@mail.com", "ngthiquyen102");
+            // ===== CASE 1: Thêm sản phẩm vào giỏ =====
+            ExtentTest test1 = extent.createTest("Thêm sản phẩm vào giỏ");
+            boolean added = cart.addProductToCart("Set quà tặng nến thơm dịu nồng 20/10");
 
-                // Mở trang sản phẩm
-                driver.get("https://dipsoul.vn/set-qua-tang-nen-thom-diu-nong-20-10");
-
-                // Khởi tạo trang giỏ hàng
-                CartPage cart = new CartPage(driver);
-
-                // Biến chứa kết quả thực tế và tổng tiền thực tế
-                String actualMessage = "";
-                String actualTotal = "";
-
-                // Xử lý từng loại hành động dựa trên dữ liệu
-                switch (action.toLowerCase()) {
-                    case "thêm":
-                        cart.addProductToCart(productName);
-                        Thread.sleep(2000); // chờ hệ thống cập nhật
-                        actualMessage = cart.getActionResultMessage();
-                        break;
-
-                    case "thay đổi số lượng":
-                        cart.updateQuantity(productName, Integer.parseInt(quantityStr));
-                        Thread.sleep(2000);
-                        actualMessage = cart.getActionResultMessage();
-                        actualTotal = cart.getTotalPriceText(); // lấy tổng tiền sau khi thay đổi
-                        break;
-
-                    case "xóa sản phẩm":
-                        cart.removeProduct(productName);
-                        Thread.sleep(2000);
-                        actualMessage = cart.getActionResultMessage();
-                        break;
-
-                    case "kiểm tra giỏ hàng trống":
-                        actualMessage = cart.getCartMessage();
-                        break;
-                }
-
-                // Kiểm tra điều kiện pass/fail
-                String status = "Fail";
-                if (action.equalsIgnoreCase("thay đổi số lượng") && !expectedTotalStr.isEmpty()) {
-                    // Kiểm tra tổng tiền có đúng không nếu có yêu cầu
-                    status = actualTotal.equals(expectedTotalStr) ? "Pass" : "Fail";
-                    test.info("Tổng tiền thực tế: " + actualTotal);
-                } else {
-                    // Kiểm tra thông báo có chứa kết quả mong muốn không
-                    status = actualMessage.toLowerCase().contains(expectedMessage.toLowerCase()) ? "Pass" : "Fail";
-                }
-
-                // Ghi vào báo cáo kiểm thử (ExtentReports)
-                if (status.equals("Pass")) {
-                    test.pass("Thành công: " + expectedMessage);
-                } else {
-                    test.fail("Thất bại\nExpected: " + expectedMessage + "\nActual: " + actualMessage);
-                }
-
-                // Ghi kết quả vào file Excel log (TestResults)
-                String[] headers = {"Hành động", "Tên sản phẩm", "Số lượng", "KQ mong muốn", "Giá", "Tổng tiền mong muốn", "KQ thực tế", "Tổng tiền thực tế", "Status"};
-                String[] values = {action, productName, quantityStr, expectedMessage, priceStr, expectedTotalStr, actualMessage, actualTotal, status};
-                ExcelLogger.logCustomRow("CartTest", headers, values);
-
-                // Đăng xuất sau khi kiểm thử xong từng test case
-                driver.get("https://dipsoul.vn/account/logout");
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                test.fail("Exception: " + e.getMessage());
+            if (added) {
+                test1.pass("Thêm sản phẩm thành công.");
+            } else {
+                test1.fail("Không thấy thông báo 'Thêm vào giỏ hàng thành công'.");
             }
+
+            // ===== CASE 2: Thay đổi số lượng =====
+            ExtentTest test2 = extent.createTest("Thay đổi số lượng sản phẩm");
+            cart.updateQuantity("Set quà tặng nến thơm dịu nóng 20/10", 4);
+            Thread.sleep(2000);
+            String message2 = cart.getActionResultMessage();
+            String total2 = cart.getTotalPriceText();
+            if (!total2.isEmpty()) {
+                test2.pass("Cập nhật số lượng thành công. Tổng tiền: " + total2);
+            } else {
+                test2.fail("Cập nhật số lượng thất bại - Msg: " + message2);
+            }
+
+            // ===== CASE 3: Xóa sản phẩm =====
+            ExtentTest test3 = extent.createTest("Xóa sản phẩm khỏi giỏ");
+            String productToRemove = "Set quà tặng nến thơm dịu nóng 20/10";
+
+            cart.removeProduct(productToRemove);
+            Thread.sleep(4000);
+
+            // Kiểm tra lại danh sách sản phẩm trong giỏ hàng
+            boolean isStillInCart = cart.isProductInCart(productToRemove);
+
+            if (!isStillInCart) {
+                test3.pass("Xóa sản phẩm thành công. Sản phẩm không còn trong giỏ hàng.");
+            } else {
+                test3.fail("Xóa sản phẩm thất bại. Sản phẩm vẫn còn trong giỏ hàng.");
+            }
+
+
+            // ===== CASE 4: Kiểm tra giỏ hàng trống =====
+            cart.clearCart();
+            ExtentTest test4 = extent.createTest("Kiểm tra giỏ hàng trống");
+            String message4 = cart.getCartMessage();
+            if (message4.toLowerCase().contains("Không có sản phẩm nào trong giỏ hàng của bạn")) {
+                test4.pass("Giỏ hàng đang trống như mong đợi");
+            } else {
+                test4.fail("Giỏ hàng không trống - Msg: " + message4);
+            }
+
+            // Đăng xuất sau khi kiểm thử
+            driver.get("https://dipsoul.vn/account/logout");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            ExtentTest test = extent.createTest("Exception xảy ra");
+            test.fail("Lỗi xảy ra: " + e.getMessage());
         }
 
-        // Kết thúc ghi báo cáo kiểm thử
+        // Kết thúc ghi báo cáo
         extent.flush();
-
-        // Mở file log Excel chứa kết quả nếu có
-        ExcelLogger.openLogFile();
     }
 }

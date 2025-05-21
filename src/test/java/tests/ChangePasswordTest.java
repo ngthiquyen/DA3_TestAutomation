@@ -19,7 +19,7 @@ public class ChangePasswordTest extends BaseTest {
 
     @Test
     public void testChangePasswordWithExcel() {
-        List<String[]> testData = ExcelUtils.readExcelData("src/test/java/resources/Data_Test.xlsx", "ChangePassword");
+        List<String[]> testData = ExcelUtils.readExcelData("src/test/resources/Data_Test.xlsx", "ChangePassword");
 
         for (String[] data : testData) {
             String oldPassword = data.length > 0 ? data[0].trim() : "";

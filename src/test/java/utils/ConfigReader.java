@@ -11,7 +11,7 @@ public class ConfigReader {
     static {
         try {
             // Đọc file cấu hình từ đường dẫn tương đối
-            FileInputStream file = new FileInputStream("src/test/java/resources/config.properties");
+            FileInputStream file = new FileInputStream("src/test/resources/config.properties");
             properties = new Properties();
             properties.load(file); // Nạp file vào đối tượng Properties
         } catch (IOException e) {

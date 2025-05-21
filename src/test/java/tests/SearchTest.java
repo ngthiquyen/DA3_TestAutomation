@@ -20,7 +20,7 @@ public class SearchTest extends BaseTest {
 
     @Test
     public void testSearchWithExcel() {
-        List<String[]> testData = ExcelUtils.readExcelData("src/test/java/resources/Data_Test.xlsx", "Search");
+        List<String[]> testData = ExcelUtils.readExcelData("src/test/resources/Data_Test.xlsx", "Search");
 
         for (String[] data : testData) {
             String keyword = data.length > 0 ? data[0].trim() : "";

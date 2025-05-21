@@ -20,7 +20,7 @@ public class LoginTest extends BaseTest {
 
     @Test
     public void testLoginWithExcel() {
-        List<String[]> testData = ExcelUtils.readExcelData("src/test/java/resources/Data_Test.xlsx", "Login");
+        List<String[]> testData = ExcelUtils.readExcelData("src/test/resources/Data_Test.xlsx", "Login");
 
         for (String[] data : testData) {
             String username = data.length > 0 ? data[0].trim() : "";

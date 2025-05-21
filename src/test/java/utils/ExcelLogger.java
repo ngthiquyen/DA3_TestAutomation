@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class ExcelLogger {
-    private static final String LOG_FILE = "src/test/java/resources/Test_Results.xlsx";
+    private static final String LOG_FILE = "src/test/resources/Test_Results.xlsx";
     private static Workbook workbook;
     private static File logFile;
 
