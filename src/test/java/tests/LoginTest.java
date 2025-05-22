@@ -11,6 +11,7 @@ import pages.LoginPage;
 import utils.ExcelLogger;
 import utils.ExcelUtils;
 import utils.ExtendReportsManager;
+import utils.ScreenshotUtils;
 
 import java.time.Duration;
 import java.util.List;
@@ -86,8 +87,9 @@ public class LoginTest extends BaseTest {
                 test.pass("\n Username: " + username +
                         "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
             } else {
+                String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "Login_Fail_" + username);
                 test.fail(" \n Username: " + username +
-                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
+                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult).addScreenCaptureFromPath(screenshotPath);
             }
 
 

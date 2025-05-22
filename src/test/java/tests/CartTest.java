@@ -7,6 +7,7 @@ import org.testng.annotations.Test;
 import pages.CartPage;
 import pages.LoginPage;
 import utils.ExtendReportsManager;
+import utils.ScreenshotUtils;
 
 public class CartTest extends BaseTest {
 
@@ -35,7 +36,8 @@ public class CartTest extends BaseTest {
             if (added) {
                 test1.pass("Thêm sản phẩm thành công.");
             } else {
-                test1.fail("Không thấy thông báo 'Thêm vào giỏ hàng thành công'.");
+                String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "CartTest_Fail_ThemSP" );
+                test1.fail("Không thấy thông báo 'Thêm vào giỏ hàng thành công'.").addScreenCaptureFromPath(screenshotPath);
             }
 
             // ===== CASE 2: Thay đổi số lượng =====
@@ -47,7 +49,8 @@ public class CartTest extends BaseTest {
             if (!total2.isEmpty()) {
                 test2.pass("Cập nhật số lượng thành công. Tổng tiền: " + total2);
             } else {
-                test2.fail("Cập nhật số lượng thất bại - Msg: " + message2);
+                String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "CartTest_Fail_CapNhatSL" );
+                test2.fail("Cập nhật số lượng thất bại - Msg: " + message2).addScreenCaptureFromPath(screenshotPath);
             }
 
             // ===== CASE 3: Xóa sản phẩm =====
@@ -63,7 +66,8 @@ public class CartTest extends BaseTest {
             if (!isStillInCart) {
                 test3.pass("Xóa sản phẩm thành công. Sản phẩm không còn trong giỏ hàng.");
             } else {
-                test3.fail("Xóa sản phẩm thất bại. Sản phẩm vẫn còn trong giỏ hàng.");
+                String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "CartTest_Fail_XoaSanPham");
+                test3.fail("Xóa sản phẩm thất bại. Sản phẩm vẫn còn trong giỏ hàng.").addScreenCaptureFromPath(screenshotPath);
             }
 
 
@@ -74,7 +78,8 @@ public class CartTest extends BaseTest {
             if (message4.toLowerCase().contains("Không có sản phẩm nào trong giỏ hàng của bạn")) {
                 test4.pass("Giỏ hàng đang trống như mong đợi");
             } else {
-                test4.fail("Giỏ hàng không trống - Msg: " + message4);
+                String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "CartTest_Fail_GioHangTrong" );
+                test4.fail("Giỏ hàng không trống - Msg: " + message4).addScreenCaptureFromPath(screenshotPath);
             }
 
             // Đăng xuất sau khi kiểm thử
