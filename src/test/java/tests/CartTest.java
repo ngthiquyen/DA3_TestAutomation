@@ -55,7 +55,7 @@ public class CartTest extends BaseTest {
 
             // ===== CASE 3: Xóa sản phẩm =====
             ExtentTest test3 = extent.createTest("Xóa sản phẩm khỏi giỏ");
-            String productToRemove = "Set quà tặng nến thơm dịu nóng 20/10";
+            String productToRemove = "Set quà tặng Dịu Nồng";
 
             cart.removeProduct(productToRemove);
             Thread.sleep(4000);
@@ -75,7 +75,7 @@ public class CartTest extends BaseTest {
             cart.clearCart();
             ExtentTest test4 = extent.createTest("Kiểm tra giỏ hàng trống");
             String message4 = cart.getCartMessage();
-            if (message4.toLowerCase().contains("Không có sản phẩm nào trong giỏ hàng của bạn")) {
+            if (message4.toLowerCase().contains("không có sản phẩm nào trong giỏ hàng của bạn")) {
                 test4.pass("Giỏ hàng đang trống như mong đợi");
             } else {
                 String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "CartTest_Fail_GioHangTrong" );
@@ -84,6 +84,8 @@ public class CartTest extends BaseTest {
 
             // Đăng xuất sau khi kiểm thử
             driver.get("https://dipsoul.vn/account/logout");
+
+            //=== CASE 5: KIỂM TRA GIẢM SỐ LƯỢNG SẢN PHẨM
 
         } catch (Exception e) {
             e.printStackTrace();

@@ -1,8 +1,6 @@
 package pages;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
+import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -35,7 +33,7 @@ public class CartPage {
             // Đợi thông báo "Mua hàng thành công" xuất hiện
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
             WebElement successPopup = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                    By.xpath("//div[@id='popup-cart-mobile']//span[contains(text(),'Mua hàng thành công')]")
+                    By.xpath("//a[contains(text(),'n có')]")
             ));
 
             // Nếu popup hiển thị đúng, trả về true
@@ -60,6 +58,7 @@ public class CartPage {
             System.out.println("Không tìm thấy ô nhập số lượng: " + e.getMessage());
         }
     }
+
 
     public boolean isProductInCart(String productName) {
         driver.get("https://dipsoul.vn/cart");
@@ -95,6 +94,8 @@ public class CartPage {
                     // Nếu đúng tên sản phẩm thì tìm nút xóa
                     WebElement removeBtn = block.findElement(By.cssSelector("a.cart__btn-remove"));
                     removeBtn.click();
+                    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+                    wait.until(ExpectedConditions.stalenessOf(block)); // Đợi block sản phẩm biến mất khỏi DOM
                     System.out.println("Đã xóa sản phẩm: " + productName);
                     break;
                 }
@@ -104,15 +105,30 @@ public class CartPage {
         }
     }
     public void clearCart() {
+        driver.get("https://dipsoul.vn/cart");
+
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+
         try {
-            List<WebElement> removeButtons = driver.findElements(By.cssSelector("a.cart__btn-remove"));
-            while (!removeButtons.isEmpty()) {
-                removeButtons.get(0).click(); // Xóa sản phẩm đầu tiên
-                Thread.sleep(1000); // Đợi UI cập nhật (hoặc dùng WebDriverWait tốt hơn)
-                removeButtons = driver.findElements(By.cssSelector("a.cart__btn-remove")); // Cập nhật lại danh sách
+            // Lặp đến khi không còn nút Xóa nào
+            while (true) {
+                List<WebElement> removeButtons = driver.findElements(By.cssSelector("a.cart__btn-remove.ajaxifyCart--remove"));
+
+                if (removeButtons.isEmpty()) {
+                    break; // Không còn nút Xóa -> giỏ hàng trống
+                }
+
+                WebElement removeBtn = removeButtons.get(0);
+                ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", removeBtn);
+                wait.until(ExpectedConditions.elementToBeClickable(removeBtn));
+                removeBtn.click();
+
+                // Đợi giỏ hàng cập nhật sau khi xóa
+                Thread.sleep(1500); // hoặc chờ thay đổi DOM nếu có thể bắt được
             }
+
         } catch (Exception e) {
-            System.out.println("Lỗi khi xóa giỏ hàng: " + e.getMessage());
+            System.out.println("Lỗi khi xóa sản phẩm khỏi giỏ hàng: " + e.getMessage());
         }
     }
 
@@ -120,7 +136,7 @@ public class CartPage {
     // Lấy thông báo hiển thị sau khi thực hiện hành động (thêm, xóa, cập nhật...)
     public String getActionResultMessage() {
         try {
-            WebElement message = driver.findElement(By.xpath("//span[contains(text(),'thành công') or contains(text(),'đã được thêm vào giỏ')]"));
+            WebElement message = driver.findElement(By.xpath("//span[contains(text(),'thành công') or contains(text(),'đã được thêm vào giỏ')], //div[@class='CartPageContainer']//p[contains(text(),'Không có sản phẩm nào trong giỏ hàng của bạn')]"));
             return message.getText();
         } catch (Exception e) {
             return "Không tìm thấy thông báo";
@@ -132,7 +148,7 @@ public class CartPage {
         driver.get("https://dipsoul.vn/cart");
 
         try {
-            WebElement msg = driver.findElement(By.xpath("//div[contains(@class, 'CartPageContainer')]//p[contains(text(),'Không có sản phẩm nào')]"));
+            WebElement msg = driver.findElement(By.xpath("//div[@class='CartPageContainer']//p[contains(text(),'Không có sản phẩm nào trong giỏ hàng của bạn')]"));
             return msg.getText();
         } catch (Exception e) {
             return "Không tìm thấy thông báo";
