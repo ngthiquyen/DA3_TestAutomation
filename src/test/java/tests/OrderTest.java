@@ -8,10 +8,11 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.annotations.Test;
-import pages.LoginPage;
+import pages.OrderPage;
 import utils.ExcelLogger;
 import utils.ExcelUtils;
 import utils.ExtendReportsManager;
+import utils.ScreenshotUtils;
 
 import java.time.Duration;
 import java.util.List;
@@ -24,116 +25,78 @@ public class OrderTest extends BaseTest {
     public void testPlaceOrder() {
         List<String[]> testData = ExcelUtils.readExcelData("src/test/resources/Data_Test.xlsx", "Order");
 
-        for (String[] row : testData) {
-            String email = row[0];
-            String name = row[1];
-            String phone = row[2];
-            String province = row[3];
-            String district = row[4];
-            String ward = row[5];
-            String shippingMethod = row[6];
-            String paymethod=row[7];
-            String note = row[8];
-            String expectedMessage = row[9];
+        for (String[] data : testData) {
+            String email = data.length > 0 ? data[0].trim() : "";
+            String name = data.length > 1 ? data[1].trim() : "";
+            String phone = data.length > 2 ? data[2].trim() : "";
+            String province = data.length > 3 ? data[3].trim() : "";
+            String district = data.length > 4 ? data[4].trim() : "";
+            String ward = data.length > 5 ? data[5].trim() : "";
+            String shippingMethod = data.length > 6 ? data[6].trim() : "";
+            String paymentMethod = data.length > 7 ? data[7].trim() : "";
+            String note = data.length > 8 ? data[8].trim() : "";
+            String expectedMessage = data.length > 9 ? data[9].trim() : "";
 
             ExtentTest test = extent.createTest("Đặt hàng với email: " + email);
 
             try {
-                // 1. Truy cập sản phẩm và thêm vào giỏ
+                // Mở trang sản phẩm
                 driver.get("https://dipsoul.vn/set-qua-tang-nen-thom-diu-nong-20-10");
-                WebElement addToCartBtn = driver.findElement(By.cssSelector(".btn.btn_base.normal_button.btn_add_cart.add_to_cart.btn-cart"));
-                addToCartBtn.click();
-                Thread.sleep(2000);
+                OrderPage order = new OrderPage(driver);
 
-                // 2. Mở giỏ hàng và chuyển đến trang thanh toán
-                driver.get("https://dipsoul.vn/cart");
-                Thread.sleep(1000);
-                WebElement checkoutBtn = driver.findElement(By.xpath("(//button[@id='btn-proceed-checkout'])[2]"));
-                checkoutBtn.click();
-                Thread.sleep(2000);
+                // Thêm vào giỏ hàng & tiến hành đặt hàng
+                order.addProductToCart();
+                order.openCartAndCheckout();
 
-                // 3. Nhập thông tin mua hàng
-                driver.findElement(By.xpath("//input[@id='email']")).sendKeys(email);
-                driver.findElement(By.xpath("//input[@id='billingName']")).sendKeys(name);
-                driver.findElement(By.xpath("//input[@id='billingPhone']")).sendKeys(phone);
+                // Nhập thông tin khách hàng
+                order.enterCustomerInfo(email, name, phone);
 
-                // Dropdown: Tỉnh - Quận - Phường
-                selectDropdownOption("Tỉnh thành (tùy chọn)", province);
-                selectDropdownOption("Quận huyện (tùy chọn)", district);
-                selectDropdownOption("Phường xã (tùy chọn)", ward);
-
+                // Chọn địa chỉ (tỉnh, quận, phường)
+                order.selectProvince(province);
+                order.selectDistrict(district);
+                order.selectWard(ward);
 
                 // Ghi chú
-                driver.findElement(By.xpath("//textarea[@id='note']")).sendKeys(note);
+                order.enterNote(note);
 
-                // 4. Chọn phương thức vận chuyển (radio button)
-                WebElement shippingRadio = driver.findElement(By.xpath("//label[contains(.,'" + shippingMethod + "')]/preceding-sibling::input[@type='radio']"));
-                if (!shippingRadio.isSelected()) {
-                    shippingRadio.click();
-                }
+                // Chọn phương thức giao hàng & thanh toán
+                order.selectShippingMethod(shippingMethod);
+                order.selectPaymentMethod(paymentMethod);
 
-                // 5. Chọn phương thức thanh toán (radio button)
-                WebElement paymentRadio = driver.findElement(By.xpath("//label[contains(.,'" + paymethod + "')]/preceding-sibling::input[@type='radio']"));
-                if (!paymentRadio.isSelected()) {
-                    paymentRadio.click();
-                }
+                // Đặt hàng
+                order.placeOrder();
 
-                Thread.sleep(1000);
-
-                // 6. Đặt hàng
-                WebElement placeOrderBtn = driver.findElement(By.xpath("(//span[@class='spinner-label'][contains(text(),'ĐẶT HÀNG')])[2]"));
-                placeOrderBtn.click();
-                Thread.sleep(3000);
-
-                // 7. Kiểm tra kết quả
-                String bodyText = driver.getPageSource();
-                String status = bodyText.contains("Cảm ơn bạn đã đặt hàng") ? "Pass" : "Fail";
+                // Kiểm tra kết quả
+                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+                WebElement getText = wait.until(ExpectedConditions.elementToBeClickable(
+                        By.xpath("//h2[contains(text(),'Cảm ơn bạn đã đặt hàng')]")));
+                String resultText = getText.getText().trim();
+                String status = resultText.contains("Cảm ơn bạn đã đặt hàng") ? "Pass" : "Fail";
 
                 if (status.equals("Pass")) {
                     test.pass("Đặt hàng thành công");
                 } else {
                     test.fail("Không tìm thấy xác nhận đặt hàng");
+                    String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "Order_Fail_" + email);
+                    test.addScreenCaptureFromPath(screenshotPath);
                 }
 
-                // Ghi log Excel
+                // Ghi log vào Excel
                 String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán", "Ghi chú", "KQ mong muốn", "KQ thực tế", "Status"};
-                String[] values = {email, name, phone, province, district, ward, shippingMethod, paymethod, note, expectedMessage, bodyText, status};
+                String[] values = {email, name, phone, province, district, ward, shippingMethod, paymentMethod, note, expectedMessage, resultText, status};
                 ExcelLogger.logCustomRow("OrderTest", headers, values);
 
             } catch (Exception e) {
                 e.printStackTrace();
-                test.fail("Exception: " + e.getMessage());
+                test.fail("Exception xảy ra: " + e.getMessage());
 
-                String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán","Ghi chú", "KQ mong muốn", "KQ thực tế", "Status"};
-                String[] values = {email, name, phone, province, district, ward, shippingMethod,paymethod, note, expectedMessage, "Lỗi Exception", "Fail"};
+                // Ghi log lỗi vào Excel
+                String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán", "Ghi chú", "KQ mong muốn", "KQ thực tế", "Status"};
+                String[] values = {email, name, phone, province, district, ward, shippingMethod, paymentMethod, note, expectedMessage, "Exception: " + e.getMessage(), "Fail"};
                 ExcelLogger.logCustomRow("OrderTest", headers, values);
             }
         }
-
         extent.flush();
         ExcelLogger.openLogFile();
-    }
-    // ===== Hàm chọn dropdown theo placeholder
-    private void selectDropdownOption(String placeholderText, String optionText) throws InterruptedException {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-
-        // Mở dropdown
-        WebElement container = wait.until(ExpectedConditions.elementToBeClickable(
-                By.xpath("//span[@class='select2-selection select2-selection--single' and ancestor::div[.//label[contains(text(), '" + placeholderText + "')]]")));
-        container.click();
-
-        // Nhập text tìm kiếm
-        WebElement searchInput = wait.until(ExpectedConditions.elementToBeClickable(
-                By.cssSelector("input.select2-search__field")
-        ));
-        searchInput.sendKeys(optionText);
-
-        Thread.sleep(800);
-        WebElement result = wait.until(ExpectedConditions.elementToBeClickable(
-                By.xpath("//li[contains(@class,'select2-results__option') and contains(text(),'" + optionText + "')]")
-        ));
-        result.click();
-
-        Thread.sleep(500);
     }
 }

@@ -58,6 +58,37 @@ public class CartPage {
             System.out.println("Không tìm thấy ô nhập số lượng: " + e.getMessage());
         }
     }
+    /// //
+    public void updateQuantity1(String productName, int newQuantity) {
+        driver.get("https://dipsoul.vn/cart");
+
+        try {
+            List<WebElement> productRows = driver.findElements(By.cssSelector(".ajaxcart__product.cart_product"));
+
+            for (WebElement row : productRows) {
+                String name = row.findElement(By.cssSelector(".ajaxcart__product-name.h4")).getText();
+                if (name.toLowerCase().contains(productName.toLowerCase())) {
+                    WebElement qtyInput = row.findElement(By.xpath("input[name='updates[]']"));
+                    qtyInput.clear();
+                    qtyInput.sendKeys(String.valueOf(newQuantity));
+                    qtyInput.sendKeys(Keys.ENTER);
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Không cập nhật được số lượng: " + e.getMessage());
+        }
+    }
+    // hàm chuyển đổi giá tiền
+    public double parsePrice(String priceText) {
+        try {
+            // Xóa dấu chấm phân cách ngàn và chữ "đ", sau đó chuyển sang double
+            String cleaned = priceText.replace(".", "").replace("₫", "").replace("đ", "").trim();
+            return Double.parseDouble(cleaned);
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
 
 
     public boolean isProductInCart(String productName) {
