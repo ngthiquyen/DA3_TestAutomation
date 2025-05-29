@@ -15,7 +15,9 @@ import utils.ExtendReportsManager;
 import utils.ScreenshotUtils;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 public class OrderTest extends BaseTest {
 
@@ -66,25 +68,55 @@ public class OrderTest extends BaseTest {
                 // Đặt hàng
                 order.placeOrder();
 
-                // Kiểm tra kết quả
-                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-                WebElement getText = wait.until(ExpectedConditions.elementToBeClickable(
-                        By.xpath("//h2[contains(text(),'Cảm ơn bạn đã đặt hàng')]")));
-                String resultText = getText.getText().trim();
-                String status = resultText.contains("Cảm ơn bạn đã đặt hàng") ? "Pass" : "Fail";
+                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
+                List<String> actualErrors = new ArrayList<>();
+                    // Ưu tiên lỗi chọn tỉnh thành trước nếu tồn tại
+                String provinceError = getFieldError(By.xpath("//p[contains(text(),'Bạn chưa chọn tỉnh thành')]"));
+                if (!provinceError.isEmpty()) {
+                    actualErrors.add(provinceError);
+                } else {
+                actualErrors.add(getFieldError(By.xpath("//p[contains(text(),'Vui lòng nhập email')],//p[contains(text(),'Email không hợp lệ')]")));
+                actualErrors.add(getFieldError(By.cssSelector("div[class='field field--error'] p[class='field__message field__message--error']")));
+                actualErrors.add(getFieldError(By.xpath("//p[contains(text(),'Số điện thoại không hợp lệ')]")));
+               // actualErrors.add(getFieldError(By.xpath("//p[contains(text(),'Bạn chưa chọn tỉnh thành')]")));
+                actualErrors.add(getFieldError(By.cssSelector("div[class='alert alert--danger']")));
+                }
+
+                actualErrors.removeIf(String::isEmpty);
+
+                String resultText;
+                if (actualErrors.isEmpty()) {
+                    try {
+                        WebElement successMsg = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                                By.xpath("//h2[contains(text(),'Cảm ơn bạn đã đặt hàng')]")));
+                        resultText = successMsg.getText().trim();
+                    } catch (Exception e) {
+                        resultText = "Không đặt hàng thành công và không có thông báo lỗi";
+                    }
+                } else {
+                    resultText = String.join("; ", actualErrors);
+                }
+
+                String status = resultText.contains(expectedMessage) ? "Pass" : "Fail";
 
                 if (status.equals("Pass")) {
-                    test.pass("Đặt hàng thành công");
+                    test.pass("Đặt hàng hợp lệ hoặc lỗi đúng như mong đợi: " + resultText);
                 } else {
-                    test.fail("Không tìm thấy xác nhận đặt hàng");
+                    test.fail("Thông báo không đúng. Mong đợi: " + expectedMessage + " - Thực tế: " + resultText);
                     String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "Order_Fail_" + email);
                     test.addScreenCaptureFromPath(screenshotPath);
                 }
+
 
                 // Ghi log vào Excel
                 String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán", "Ghi chú", "KQ mong muốn", "KQ thực tế", "Status"};
                 String[] values = {email, name, phone, province, district, ward, shippingMethod, paymentMethod, note, expectedMessage, resultText, status};
                 ExcelLogger.logCustomRow("OrderTest", headers, values);
+
+                // Reload lại trang để xóa dữ liệu trước đó
+                driver.manage().deleteAllCookies();
+                driver.get("https://dipsoul.vn/set-qua-tang-nen-thom-diu-nong-20-10");
+                Thread.sleep(2000); // Đợi trang tải lại hoàn tất
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -94,9 +126,26 @@ public class OrderTest extends BaseTest {
                 String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán", "Ghi chú", "KQ mong muốn", "KQ thực tế", "Status"};
                 String[] values = {email, name, phone, province, district, ward, shippingMethod, paymentMethod, note, expectedMessage, "Exception: " + e.getMessage(), "Fail"};
                 ExcelLogger.logCustomRow("OrderTest", headers, values);
+
+                // Reload trang nếu có lỗi để test tiếp theo không bị ảnh hưởng
+                driver.manage().deleteAllCookies();
+                driver.get("https://dipsoul.vn/set-qua-tang-nen-thom-diu-nong-20-10");
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ignored) {}
             }
         }
         extent.flush();
         ExcelLogger.openLogFile();
+    }
+    private String getFieldError(By locator) {
+        try {
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            WebElement errorElement = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+            return errorElement.getText().trim();
+        } catch (Exception e) {
+            System.out.println("Không tìm thấy lỗi với locator: " + locator);
+            return "";
+        }
     }
 }
