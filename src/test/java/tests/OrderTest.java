@@ -15,9 +15,9 @@ import utils.ExtendReportsManager;
 import utils.ScreenshotUtils;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
+
+// ... giữ nguyên import
 
 public class OrderTest extends BaseTest {
 
@@ -37,7 +37,8 @@ public class OrderTest extends BaseTest {
             String shippingMethod = data.length > 6 ? data[6].trim() : "";
             String paymentMethod = data.length > 7 ? data[7].trim() : "";
             String note = data.length > 8 ? data[8].trim() : "";
-            String expectedMessage = data.length > 9 ? data[9].trim() : "";
+            String discountCode = data.length > 9 ? data[9].trim() : "";
+            String expectedMessage = data.length > 10 ? data[10].trim() : "";
 
             ExtentTest test = extent.createTest("Đặt hàng với email: " + email);
 
@@ -53,40 +54,44 @@ public class OrderTest extends BaseTest {
                 // Nhập thông tin khách hàng
                 order.enterCustomerInfo(email, name, phone);
 
-                // Chọn địa chỉ (tỉnh, quận, phường)
-                order.selectProvince(province);
-                order.selectDistrict(district);
-                order.selectWard(ward);
+                boolean selectedProvince = order.selectProvince(province);
+                boolean selectedDistrict = selectedProvince && order.selectDistrict(district);
+                boolean selectedWard = selectedDistrict && order.selectWard(ward);
 
-                // Ghi chú
                 order.enterNote(note);
+                boolean shippingSelected = selectedWard && order.selectShippingMethod(shippingMethod);
+                boolean paymentSelected = !paymentMethod.isEmpty() && order.selectPaymentMethod(paymentMethod);
 
-                // Chọn phương thức giao hàng & thanh toán
-                order.selectShippingMethod(shippingMethod);
-                order.selectPaymentMethod(paymentMethod);
+                if (!discountCode.isEmpty()) {
+                    order.enterDiscountCode(discountCode);
+                }
 
+                order.clickCaptchaCheckbox();
                 // Đặt hàng
                 order.placeOrder();
 
-                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-                List<String> actualErrors = new ArrayList<>();
-                    // Ưu tiên lỗi chọn tỉnh thành trước nếu tồn tại
-                String provinceError = getFieldError(By.xpath("//p[contains(text(),'Bạn chưa chọn tỉnh thành')]"));
-                if (!provinceError.isEmpty()) {
-                    actualErrors.add(provinceError);
+                // ✅ Dùng Set để loại bỏ lỗi trùng lặp
+                Set<String> actualErrors = new LinkedHashSet<>();
+
+                if (!selectedProvince) {
+                    actualErrors.add(getFieldError(By.xpath("(//p[contains(text(),'Bạn chưa chọn tỉnh thành')])[1]")));
                 } else {
-                actualErrors.add(getFieldError(By.xpath("//p[contains(text(),'Vui lòng nhập email')],//p[contains(text(),'Email không hợp lệ')]")));
-                actualErrors.add(getFieldError(By.cssSelector("div[class='field field--error'] p[class='field__message field__message--error']")));
-                actualErrors.add(getFieldError(By.xpath("//p[contains(text(),'Số điện thoại không hợp lệ')]")));
-               // actualErrors.add(getFieldError(By.xpath("//p[contains(text(),'Bạn chưa chọn tỉnh thành')]")));
-                actualErrors.add(getFieldError(By.cssSelector("div[class='alert alert--danger']")));
+                    actualErrors.add(getFieldError(By.xpath("//p[contains(text(),'Vui lòng nhập email') or contains(text(),'Email không hợp lệ')]")));
+                    actualErrors.add(getFieldError(By.xpath("//p[contains(text(),'Số điện thoại không hợp lệ')]")));
+                    actualErrors.add(getFieldError(By.cssSelector("div[class='field field--error'] p[class='field__message field__message--error']")));
+                    actualErrors.add(getFieldError(By.cssSelector("div[class='alert alert--danger']")));
+
+                    if (!paymentSelected) {
+                        actualErrors.add(getFieldError(By.xpath("//div[contains(text(), 'Bạn cần chọn phương thức thanh toán')]")));
+                    }
                 }
 
                 actualErrors.removeIf(String::isEmpty);
 
                 String resultText;
-                if (actualErrors.isEmpty()) {
+                if (actualErrors.isEmpty() && selectedProvince && selectedDistrict && selectedWard && shippingSelected && paymentSelected) {
                     try {
+                        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
                         WebElement successMsg = wait.until(ExpectedConditions.visibilityOfElementLocated(
                                 By.xpath("//h2[contains(text(),'Cảm ơn bạn đã đặt hàng')]")));
                         resultText = successMsg.getText().trim();
@@ -100,34 +105,31 @@ public class OrderTest extends BaseTest {
                 String status = resultText.contains(expectedMessage) ? "Pass" : "Fail";
 
                 if (status.equals("Pass")) {
-                    test.pass("Đặt hàng hợp lệ hoặc lỗi đúng như mong đợi: " + resultText);
+                    test.pass(resultText);
                 } else {
                     test.fail("Thông báo không đúng. Mong đợi: " + expectedMessage + " - Thực tế: " + resultText);
                     String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "Order_Fail_" + email);
                     test.addScreenCaptureFromPath(screenshotPath);
                 }
-
-
+                String testTime = java.time.LocalDateTime.now().toString();
                 // Ghi log vào Excel
-                String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán", "Ghi chú", "KQ mong muốn", "KQ thực tế", "Status"};
-                String[] values = {email, name, phone, province, district, ward, shippingMethod, paymentMethod, note, expectedMessage, resultText, status};
+                String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán", "Ghi chú", "Mã giảm giá", "KQ mong muốn", "KQ thực tế", "Status", "Thời gian"};
+                String[] values = {email, name, phone, province, district, ward, shippingMethod, paymentMethod, note, discountCode, expectedMessage, resultText, status, testTime};
                 ExcelLogger.logCustomRow("OrderTest", headers, values);
 
-                // Reload lại trang để xóa dữ liệu trước đó
+                // Reset cho lần chạy tiếp theo
                 driver.manage().deleteAllCookies();
                 driver.get("https://dipsoul.vn/set-qua-tang-nen-thom-diu-nong-20-10");
-                Thread.sleep(2000); // Đợi trang tải lại hoàn tất
+                Thread.sleep(2000);
 
             } catch (Exception e) {
                 e.printStackTrace();
                 test.fail("Exception xảy ra: " + e.getMessage());
-
-                // Ghi log lỗi vào Excel
-                String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán", "Ghi chú", "KQ mong muốn", "KQ thực tế", "Status"};
-                String[] values = {email, name, phone, province, district, ward, shippingMethod, paymentMethod, note, expectedMessage, "Exception: " + e.getMessage(), "Fail"};
+                String testTime = java.time.LocalDateTime.now().toString();
+                String[] headers = {"Email", "Họ tên", "SĐT", "Tỉnh", "Quận", "Phường", "Vận chuyển", "Thanh toán", "Ghi chú", "Mã giảm giá", "KQ mong muốn", "KQ thực tế", "Status","Thời gian"};
+                String[] values = {email, name, phone, province, district, ward, shippingMethod, paymentMethod, note, discountCode, expectedMessage, "Exception: " + e.getMessage(), "Fail",testTime};
                 ExcelLogger.logCustomRow("OrderTest", headers, values);
 
-                // Reload trang nếu có lỗi để test tiếp theo không bị ảnh hưởng
                 driver.manage().deleteAllCookies();
                 driver.get("https://dipsoul.vn/set-qua-tang-nen-thom-diu-nong-20-10");
                 try {
@@ -138,6 +140,7 @@ public class OrderTest extends BaseTest {
         extent.flush();
         ExcelLogger.openLogFile();
     }
+
     private String getFieldError(By locator) {
         try {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
