@@ -35,65 +35,53 @@ public class LoginTest extends BaseTest {
             driver.get("https://dipsoul.vn/account/login");
             LoginPage loginPage = new LoginPage(driver);
 
-            WebElement emailInput = loginPage.getEmailInput();
-            WebElement passwordInput = loginPage.getPasswordInput();
-            WebElement loginBtn = loginPage.getLoginButton();
+            loginPage.getEmailInput().clear();
+            loginPage.getPasswordInput().clear();
 
-            // Xóa trước mỗi lần chạy
-            emailInput.clear();
-            passwordInput.clear();
+            if (!username.isEmpty()) loginPage.getEmailInput().sendKeys(username);
+            if (!password.isEmpty()) loginPage.getPasswordInput().sendKeys(password);
 
-            if (!username.isEmpty()) emailInput.sendKeys(username);
-            if (!password.isEmpty()) passwordInput.sendKeys(password);
-
-            loginBtn.click();
+            loginPage.getLoginButton().click();
 
             String actualResult = "";
 
             try {
-                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-
-                // TH1: Kiểm tra nếu đăng nhập thành công
-                WebElement welcomeText = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                        By.xpath("//p/span[contains(text(), 'Nguyễn Thị Quyên')]")));
-
-                actualResult = welcomeText.getText().trim();
-                test.pass("Đăng nhập thành công: " + actualResult);
-
+                // Nếu thiếu username hoặc password, lấy thông báo HTML5
+                if (username.isEmpty() || password.isEmpty()) {
+                    JavascriptExecutor js = (JavascriptExecutor) driver;
+                    WebElement fieldToCheck = username.isEmpty() ? loginPage.getEmailInput() : loginPage.getPasswordInput();
+                    actualResult = (String) js.executeScript("return arguments[0].validationMessage;", fieldToCheck);
+                } else {
+                    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
+                    // Trường hợp đăng nhập thành công
+                    WebElement welcomeText = wait.until(ExpectedConditions.visibilityOfElementLocated(loginPage.getWelcomeTextLocator()));
+                    actualResult = welcomeText.getText().trim();
+                }
             } catch (TimeoutException e) {
-                // TH2: Không đăng nhập được, kiểm tra thông báo lỗi
                 try {
-                    WebElement body = driver.findElement(By.tagName("body"));
-                    String pageText = body.getText().trim();
-
-                    if (pageText.contains("Thông tin đăng nhập không chính xác")) {
-                        actualResult = "Thông tin đăng nhập không chính xác.";
-                    } else if (pageText.contains("Vui lòng điền vào trường này.")) {
-                        actualResult = "Vui lòng điền vào trường này.";
-                    } else if (username.isEmpty() || password.isEmpty() ) {
-                        actualResult = "Vui lòng điền vào trường này.";
-                    }else
-                    {
-                        actualResult = "Thông tin đăng nhập không chính xác.";
-                    }
-
+                    // Trường hợp đăng nhập thất bại
+                    WebDriverWait waitError = new WebDriverWait(driver, Duration.ofSeconds(3));
+                    WebElement errorMsg = waitError.until(ExpectedConditions.visibilityOfElementLocated(loginPage.getLoginErrorMessageLocator()));
+                    actualResult = errorMsg.getText().trim();
                 } catch (Exception ex) {
-                    actualResult = "Lỗi không xác định: " + ex.getMessage();
+                    actualResult = "Không xác định được lỗi từ hệ thống.";
                     test.fail(actualResult);
                 }
             }
-            // Ghi vào ExtentReport dựa trên actual vs expected
+
+
+            // Ghi báo cáo Extent
             if (actualResult.equalsIgnoreCase(expectedResult)) {
                 test.pass("\n Username: " + username +
                         "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
             } else {
                 String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "Login_Fail_" + username);
                 test.fail(" \n Username: " + username +
-                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult).addScreenCaptureFromPath(screenshotPath);
+                                "\n Expected: " + expectedResult + "\n Actual: " + actualResult)
+                        .addScreenCaptureFromPath(screenshotPath);
             }
 
-
-            // Ghi log kết quả
+            // Ghi log Excel
             String status = actualResult.equalsIgnoreCase(expectedResult) ? "Pass" : "Fail";
             ExcelLogger.logResult("Login", username, password, actualResult, expectedResult, status);
         }

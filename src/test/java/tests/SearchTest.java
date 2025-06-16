@@ -1,16 +1,12 @@
 package tests;
 
 import base.BaseTest;
-import com.aventstack.extentreports.ExtentReports;
-import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.*;
 import org.openqa.selenium.*;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.*;
 import org.testng.annotations.Test;
 import pages.SearchPage;
-import utils.ExcelLogger;
-import utils.ExcelUtils;
-import utils.ExtendReportsManager;
+import utils.*;
 
 import java.time.Duration;
 import java.util.List;
@@ -25,112 +21,75 @@ public class SearchTest extends BaseTest {
         for (String[] data : testData) {
             String keyword = data.length > 0 ? data[0].trim() : "";
             String expectedResult = data.length > 1 ? data[1].trim() : "";
-
             ExtentTest test = extent.createTest("Tìm kiếm sản phẩm: " + keyword);
             System.out.println("Đang kiểm tra tìm kiếm với từ khóa: " + keyword);
 
             String actualResult = "";
-            // Xử lý từ khóa rỗng
+
             if (keyword.isEmpty()) {
                 actualResult = "Vui lòng điền vào trường này.";
-                // Ghi vào ExtentReport
-                if (actualResult.equalsIgnoreCase(expectedResult)) {
-                    test.pass("Keyword: " + keyword +
-                            "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
-                } else {
-                    test.fail("Keyword: " + keyword +
-                            "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
-                }
-                String status = actualResult.equalsIgnoreCase(expectedResult) ? "Pass" : "Fail";
-                String[] headers = {"Keyword", "Expected", "Actual", "Status"};
-                String[] values = {keyword, expectedResult, actualResult, status};
-                ExcelLogger.logCustomRow("Search", headers, values);
-                continue; // Bỏ qua test này
+                logResultAndContinue(test, keyword, expectedResult, actualResult);
+                continue;
             }
 
             driver.get("https://dipsoul.vn/search");
             SearchPage searchPage = new SearchPage(driver);
 
             try {
-                // Đợi input hiển thị sẵn sàng
                 WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
                 wait.until(ExpectedConditions.visibilityOf(searchPage.getSearchInput()));
 
                 String currentUrl = driver.getCurrentUrl();
                 searchPage.searchProduct(keyword);
+                wait.until(ExpectedConditions.not(ExpectedConditions.urlToBe(currentUrl)));
 
+                List<WebElement> productTitles = searchPage.getProductTitles();
+                StringBuilder resultBuilder = new StringBuilder();
 
-                    // Đợi redirect URL nếu có kết quả
-                    wait.until(ExpectedConditions.not(ExpectedConditions.urlToBe(currentUrl)));
+                for (WebElement title : productTitles) {
+                    resultBuilder.append(title.getText().trim()).append(" | ");
+                }
 
-                    // Kiểm tra URL mới
-                    String newUrl = driver.getCurrentUrl();
-
-                    // TH1: Không tìm thấy kết quả (thông báo xuất hiện)
-                    List<WebElement> noResults = driver.findElements(
-                            By.xpath("//p[contains(text(),'Không tìm thấy bất kỳ kết quả nào với từ khóa trên')]")
-                    );
-
-                    if (!noResults.isEmpty()) {
-                        actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
-                    } else {
-                        // TH2: Có kết quả tìm kiếm -> kiểm tra các sản phẩm hiển thị
-                        List<WebElement> productItems = driver.findElements(By.xpath("//div[@class='category-products']"));
-
-                        if (!productItems.isEmpty()) {
-                            String[] keywordParts = keyword.toLowerCase().split("\\s+");
-                            boolean foundMatchingProduct = false;
-
-                            for (WebElement product : productItems) {
-                                String productText = product.getText().toLowerCase();
-                                boolean allWordsMatch = true;
-
-                                for (String word : keywordParts) {
-                                    if (!productText.contains(word)) {
-                                        allWordsMatch = false;
-                                        break;
-                                    }
-                                }
-                                if (allWordsMatch) {
-                                    foundMatchingProduct = true;
-                                    break;
-                                }
-                            }
-
-                            if (foundMatchingProduct) {
-                                actualResult =  keyword ;
-                            } else {
-                                actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
-                            }
-                        } else {
-                            actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
-                        }
-                    }
+                actualResult = resultBuilder.length() > 0
+                        ? resultBuilder.toString().replaceAll(" \\| $", "")
+                        : ""; // Không có sản phẩm nào hiện ra
 
             } catch (TimeoutException te) {
-                actualResult = "Không tìm thấy bất kỳ kết quả nào với từ khóa trên.";
+                actualResult = ""; // Timeout cũng coi như không có sản phẩm
             } catch (Exception ex) {
-                ex.printStackTrace(); // In lỗi ra console để dễ debug
+                ex.printStackTrace();
                 actualResult = "Lỗi không xác định: " + ex.getMessage();
             }
-            // Ghi vào ExtentReport
-            if (actualResult.equalsIgnoreCase(expectedResult)) {
-                test.pass("Keyword: " + keyword +
-                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
-            } else {
-                test.fail("Keyword: " + keyword +
-                        "\n Expected: " + expectedResult + "\n Actual: " + actualResult);
-            }
 
-            // Ghi log Excel
-            String status = actualResult.equalsIgnoreCase(expectedResult) ? "Pass" : "Fail";
-            String[] headers = { "Keyword", "Expected", "Actual", "Status"};
-            String[] values = {keyword, expectedResult, actualResult, status};
-            ExcelLogger.logCustomRow("Search", headers, values);
+            logResultAndContinue(test, keyword, expectedResult, actualResult);
         }
 
         extent.flush();
         System.out.println("Đã hoàn tất kiểm thử tìm kiếm.");
         ExcelLogger.openLogFile();
+    }
+
+    private void logResultAndContinue(ExtentTest test, String keyword, String expected, String actual) {
+        // Nếu actual là danh sách tiêu đề sản phẩm, kiểm tra có chứa keyword không
+        boolean isPass = false;
+
+        if (actual.equalsIgnoreCase("Vui lòng điền vào trường này.")) {
+            isPass = expected.equalsIgnoreCase("Vui lòng điền vào trường này.");
+        } else if (actual.toLowerCase().contains(keyword.toLowerCase())) {
+            isPass = true;
+        }
+
+        String status = isPass ? "Pass" : "Fail";
+
+        if (isPass) {
+            test.pass("Keyword: " + keyword + "\nExpected: " + expected + "\nActual: " + actual);
+        } else {
+            test.fail("Keyword: " + keyword + "\nExpected: " + expected + "\nActual: " + actual);
+        }
+
+        String testTime = java.time.LocalDateTime.now().toString();
+        String[] headers = {"Keyword", "Expected", "Actual", "Status", "Thời gian"};
+        String[] values = {keyword, expected, actual, status, testTime};
+        ExcelLogger.logCustomRow("Search", headers, values);
     }
 }

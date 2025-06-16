@@ -62,12 +62,7 @@ public class ChangePasswordTest extends BaseTest {
                    if (actualMessage.isEmpty()) {
                        actualMessage = changePage.getSuccessMessage();
                    }
-                    //}
 
-                    // Nếu vẫn không có gì trả về
-                   //if (actualMessage.isEmpty()) {
-                   //    actualMessage = "Không có thông báo trả về từ hệ thống.";
-                  // }
                 }
 
                 // So sánh kết quả

@@ -197,4 +197,51 @@ public class CartPage {
             return "0";
         }
     }
+
+    // Trả về WebElement chứa dòng sản phẩm theo tên
+    public WebElement getProductRow(String productName) {
+        List<WebElement> productRows = driver.findElements(By.cssSelector(".ajaxcart__product.cart_product"));
+        for (WebElement row : productRows) {
+            String name = row.findElement(By.cssSelector(".ajaxcart__product-name.h4")).getText();
+            if (name.toLowerCase().contains(productName.toLowerCase())) {
+                return row;
+            }
+        }
+        return null;
+    }
+
+    // Lấy đơn giá từ dòng sản phẩm
+    public String getUnitPriceFromRow(WebElement row) {
+        try {
+            return row.findElement(By.cssSelector(".cart-price")).getText();
+        } catch (Exception e) {
+            return "0";
+        }
+    }
+
+    // Lấy tổng giá từ dòng sản phẩm
+    public String getTotalPriceFromRow(WebElement row) {
+        try {
+            return row.findElement(By.cssSelector(".CartItemLinePrice")).getText();
+        } catch (Exception e) {
+            return "0";
+        }
+    }
+
+    // Hàm xác minh tổng tiền hiển thị có đúng không
+    public boolean verifyTotalPrice(String productName, int quantity, double threshold) {
+        try {
+            WebElement row = getProductRow(productName);
+            if (row == null) return false;
+
+            double unitPrice = parsePrice(getUnitPriceFromRow(row));
+            double displayedTotal = parsePrice(getTotalPriceFromRow(row));
+            double expectedTotal = unitPrice * quantity;
+
+            return Math.abs(displayedTotal - expectedTotal) <= threshold;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
 }

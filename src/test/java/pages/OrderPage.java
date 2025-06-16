@@ -43,12 +43,11 @@ public class OrderPage {
 
     public boolean selectProvince(String provinceName) {
         try {
-            WebElement provinceDropdown = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("(//span[@id='select2-billingProvince-container'])")));
+            WebElement provinceDropdown = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("(//span[@id='select2-billingProvince-container'])")));
             provinceDropdown.click();
-
             WebElement provinceOption = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.xpath("//li[contains(text(),'" + provinceName + "')]")
-            ));
+                    By.xpath("//li[contains(text(),'" + provinceName + "')]")));
             provinceOption.click();
             return true;
         } catch (TimeoutException e) {
@@ -59,12 +58,11 @@ public class OrderPage {
 
     public boolean selectDistrict(String districtName) {
         try {
-            WebElement districtDropdown = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("(//span[@id='select2-billingDistrict-container'])")));
+            WebElement districtDropdown = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("(//span[@id='select2-billingDistrict-container'])")));
             districtDropdown.click();
-
             WebElement districtOption = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.xpath("//li[contains(text(),'" + districtName + "')]")
-            ));
+                    By.xpath("//li[contains(text(),'" + districtName + "')]")));
             districtOption.click();
             return true;
         } catch (TimeoutException e) {
@@ -75,12 +73,11 @@ public class OrderPage {
 
     public boolean selectWard(String wardName) {
         try {
-            WebElement wardDropdown = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("(//span[@id='select2-billingWard-container'])")));
+            WebElement wardDropdown = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("(//span[@id='select2-billingWard-container'])")));
             wardDropdown.click();
-
             WebElement wardOption = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.xpath("//li[contains(text(),'" + wardName + "')]")
-            ));
+                    By.xpath("//li[contains(text(),'" + wardName + "')]")));
             wardOption.click();
             return true;
         } catch (TimeoutException e) {
@@ -95,32 +92,26 @@ public class OrderPage {
 
     public boolean selectShippingMethod(String method) {
         try {
-            // Tìm element radio theo text chứa tên phương thức vận chuyển
             WebElement shippingOption = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.xpath("//label[contains(normalize-space(),'" + method + "')]")
-            ));
+                    By.xpath("//label[contains(normalize-space(),'" + method + "')]")));
             shippingOption.click();
             return true;
         } catch (Exception e) {
-            System.out.println("Không thể chọn phương thức vận chuyển: " + method+ " - " + e.getMessage());
+            System.out.println("Không thể chọn phương thức vận chuyển: " + method + " - " + e.getMessage());
             return false;
         }
     }
-
 
     public boolean selectPaymentMethod(String method) {
         if (method == null || method.trim().isEmpty()) {
             System.out.println("Không có phương thức thanh toán được cung cấp.");
             return false;
         }
-
         try {
             WebElement label = wait.until(ExpectedConditions.presenceOfElementLocated(
                     By.xpath("//label[contains(.,'" + method + "')]")));
-
             WebElement radio = wait.until(ExpectedConditions.elementToBeClickable(
                     By.xpath("//label[@for='paymentMethod-786631']")));
-
             if (!radio.isSelected()) {
                 radio.click();
             }
@@ -131,7 +122,29 @@ public class OrderPage {
         }
     }
 
-////label[@for='paymentMethod-786631']
+    public void enterDiscountCode(String code) {
+        try {
+            WebElement discountInput = driver.findElement(By.xpath("//input[@id='reductionCode']"));
+            discountInput.clear();
+            discountInput.sendKeys(code);
+            WebElement applyButton = driver.findElement(By.xpath("//button[@type='button']"));
+            applyButton.click();
+            Thread.sleep(2000);
+        } catch (Exception e) {
+            System.out.println("Không thể áp dụng mã giảm giá: " + e.getMessage());
+        }
+    }
+
+    public void clickCaptchaCheckbox() {
+        try {
+            WebElement captchaCheckbox = driver.findElement(By.xpath("//*[@id=\"recaptcha-anchor\"]/div[4]"));
+            captchaCheckbox.click();
+            Thread.sleep(5000);
+        } catch (Exception e) {
+            System.out.println("Không thao tác được với captcha: " + e.getMessage());
+        }
+    }
+
     public void placeOrder() throws InterruptedException {
         WebElement placeOrderBtn = wait.until(ExpectedConditions.elementToBeClickable(
                 By.xpath("(//span[@class='spinner-label'][contains(text(),'ĐẶT HÀNG')])[2]")));
@@ -139,30 +152,36 @@ public class OrderPage {
         Thread.sleep(3000);
     }
 
-    // Nhập mã giảm giá
-    public void enterDiscountCode(String code) {
+    public String getErrorMessage(String type) {
         try {
-            WebElement discountInput = driver.findElement(By.xpath("//input[@id='reductionCode']"));
-            discountInput.clear();
-            discountInput.sendKeys(code);
-
-            WebElement applyButton = driver.findElement(By.xpath("//button[@type='button']"));
-            applyButton.click();
-            Thread.sleep(2000); // Chờ mã giảm giá được xử lý
+            By locator = switch (type.toLowerCase()) {
+                case "email" -> By.xpath("//p[contains(text(),'Vui lòng nhập email') or contains(text(),'Email không hợp lệ')]");
+                case "phone" -> By.xpath("//p[contains(text(),'Số điện thoại không hợp lệ')]");
+                case "province" -> By.xpath("(//p[contains(text(),'Bạn chưa chọn tỉnh thành')])[1]");
+                case "field" -> By.cssSelector("div[class='field field--error'] p[class='field__message field__message--error']");
+                case "alert" -> By.cssSelector("div[class='alert alert--danger']");
+                case "payment" -> By.xpath("//div[contains(text(), 'Bạn cần chọn phương thức thanh toán')]");
+                default -> null;
+            };
+            if (locator != null) {
+                WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+                WebElement errorElement = shortWait.until(ExpectedConditions.presenceOfElementLocated(locator));
+                return errorElement.getText().trim();
+            }
         } catch (Exception e) {
-            System.out.println("Không thể áp dụng mã giảm giá: " + e.getMessage());
+            System.out.println("Không tìm thấy lỗi loại: " + type + " - " + e.getMessage());
         }
+        return "";
     }
 
-    // Tick captcha (nếu có thể thao tác được)
-    public void clickCaptchaCheckbox() {
+    public String getSuccessMessage() {
         try {
-            WebElement captchaCheckbox = driver.findElement(By.xpath("//*[@id=\"recaptcha-anchor\"]/div[4]"));
-            captchaCheckbox.click();
-            Thread.sleep(5000);
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            WebElement successMsg = shortWait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.xpath("//h2[contains(text(),'Cảm ơn bạn đã đặt hàng')]")));
+            return successMsg.getText().trim();
         } catch (Exception e) {
-            System.out.println("Không thao tác được với captcha (có thể do bảo mật Google): " + e.getMessage());
+            return "";
         }
     }
-
 }

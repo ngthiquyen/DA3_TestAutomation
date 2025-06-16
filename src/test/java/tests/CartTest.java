@@ -89,49 +89,34 @@ public class CartTest extends BaseTest {
             // Đăng xuất sau khi kiểm thử
             driver.get("https://dipsoul.vn/account/logout");
 
-            //=== CASE 5: KIỂM TRA GIẢM SỐ LƯỢNG SẢN PHẨM
+            // === CASE 5: Kiểm tra giảm số lượng sản phẩm và tổng tiền sau khi giảm ===
             ExtentTest test5 = extent.createTest("Kiểm tra giảm số lượng sản phẩm và tổng tiền sau khi giảm");
-            String productName = "Set quà tặng Dịu Nồng"; // tên sản phẩm cần kiểm tra
+
+            String productName = "Set quà tặng Dịu Nồng";
             int newQuantity = 3;
             cart.updateQuantity1(productName, newQuantity);
 
-            try {
-                // Đợi cập nhật xong (có thể cần điều chỉnh lại chờ rõ ràng hơn)
-                Thread.sleep(3000);
+            // Đợi cập nhật xong
+            Thread.sleep(3000);
 
-                // Lấy dòng chứa sản phẩm cần kiểm tra
-                List<WebElement> productRows = driver.findElements(By.cssSelector(".ajaxcart__product.cart_product"));
-                for (WebElement row : productRows) {
-                    String name = row.findElement(By.cssSelector(".ajaxcart__product-name.h4")).getText();
+            // Gọi lại hàng chứa sản phẩm từ CartPage
+            WebElement row = cart.getProductRow(productName);
 
-                    if (name.toLowerCase().contains(productName.toLowerCase())) {
-                        // Lấy đơn giá (giá sản phẩm)
-                        String unitPriceText = row.findElement(By.cssSelector(".cart-price")).getText();
-                        double unitPrice = cart.parsePrice(unitPriceText);
+            if (row != null) {
+                double unitPrice = cart.parsePrice(cart.getUnitPriceFromRow(row));
+                double displayedTotal = cart.parsePrice(cart.getTotalPriceFromRow(row));
+                double expectedTotal = unitPrice * newQuantity;
 
-                        // Lấy tổng giá (sau khi thay đổi số lượng)
-                        String totalPriceText = row.findElement(By.cssSelector(".CartItemLinePrice")).getText();
-                        double displayedTotal = cart.parsePrice(totalPriceText);
-
-                        // Tính tổng giá kỳ vọng
-                        double expectedTotal = unitPrice * newQuantity;
-
-                        if (Math.abs(expectedTotal - displayedTotal) < 1000) { // chênh lệch nhỏ do định dạng
-                            test5.pass("Tổng tiền sau khi cập nhật đúng: " + displayedTotal + "đ");
-                        } else {
-                            String screenshot = ScreenshotUtils.takeScreenshot(driver, "GiamSoLuong_SaiTongTien");
-                            test5.fail("Tổng tiền không đúng. Mong đợi: " + expectedTotal + "đ, Thực tế: " + displayedTotal + "đ")
-                                    .addScreenCaptureFromPath(screenshot);
-                        }
-                        return; // kết thúc sau khi tìm thấy sản phẩm
-                    }
+                if (Math.abs(expectedTotal - displayedTotal) < 1000) {
+                    test5.pass("Tổng tiền sau khi cập nhật đúng: " + displayedTotal + "đ");
+                } else {
+                    String screenshot = ScreenshotUtils.takeScreenshot(driver, "GiamSoLuong_SaiTongTien");
+                    test5.fail("Tổng tiền không đúng. Mong đợi: " + expectedTotal + "đ, Thực tế: " + displayedTotal + "đ")
+                            .addScreenCaptureFromPath(screenshot);
                 }
-                test5.fail("Không tìm thấy sản phẩm trong giỏ hàng để kiểm tra");
-
-            } catch (Exception e) {
-                String screenshot = ScreenshotUtils.takeScreenshot(driver, "GiamSoLuong_Loi");
-                test5.fail("Đã xảy ra lỗi: " + e.getMessage())
-                        .addScreenCaptureFromPath(screenshot);
+            } else {
+                String screenshot = ScreenshotUtils.takeScreenshot(driver, "GiamSoLuong_KhongTimThaySP");
+                test5.fail("Không tìm thấy sản phẩm trong giỏ hàng").addScreenCaptureFromPath(screenshot);
             }
 
         } catch (Exception e) {
