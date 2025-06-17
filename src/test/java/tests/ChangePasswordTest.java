@@ -11,6 +11,7 @@ import pages.LoginPage;
 import utils.ExcelLogger;
 import utils.ExcelUtils;
 import utils.ExtendReportsManager;
+import utils.ScreenshotUtils;
 
 import java.util.List;
 
@@ -73,6 +74,8 @@ public class ChangePasswordTest extends BaseTest {
                     test.pass("Thành công\nExpected: " + expectedMessage + "\nActual: " + actualMessage);
                 } else {
                     test.fail("Thất bại\nExpected: " + expectedMessage + "\nActual: " + actualMessage);
+                    String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "ChangePassword_Fail_" + oldPassword +"->" + newPassword);
+                    test.addScreenCaptureFromPath(screenshotPath);
                 }
                 String testTime = java.time.LocalDateTime.now().toString();
                 String[] headers = {"OldPassword", "NewPassword", "ConfirmPassword", "Expected", "Actual", "Status","Time"};

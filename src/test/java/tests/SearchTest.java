@@ -25,15 +25,18 @@ public class SearchTest extends BaseTest {
             System.out.println("Đang kiểm tra tìm kiếm với từ khóa: " + keyword);
 
             String actualResult = "";
-
-            if (keyword.isEmpty()) {
-                actualResult = "Vui lòng điền vào trường này.";
-                logResultAndContinue(test, keyword, expectedResult, actualResult);
-                continue;
-            }
-
             driver.get("https://dipsoul.vn/search");
             SearchPage searchPage = new SearchPage(driver);
+
+            if (keyword.isEmpty()) {
+                WebElement input = searchPage.getSearchInput();
+                input.click();
+                input.sendKeys(Keys.ENTER); // Kích hoạt thông báo validation
+                actualResult = searchPage.getHtml5ValidationMessage();
+                logResultAndContinue(test, keyword, expectedResult, actualResult);
+                continue;
+
+            }
 
             try {
                 WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
@@ -42,17 +45,23 @@ public class SearchTest extends BaseTest {
                 String currentUrl = driver.getCurrentUrl();
                 searchPage.searchProduct(keyword);
                 wait.until(ExpectedConditions.not(ExpectedConditions.urlToBe(currentUrl)));
+// Chờ 1 trong 2 điều kiện: có sản phẩm hoặc có thông báo không tìm thấy
+                wait.until(driver1 ->
+                        !searchPage.getProductTitles().isEmpty() || searchPage.isNoResultMessageDisplayed()
 
+                );
                 List<WebElement> productTitles = searchPage.getProductTitles();
-                StringBuilder resultBuilder = new StringBuilder();
-
-                for (WebElement title : productTitles) {
-                    resultBuilder.append(title.getText().trim()).append(" | ");
+                if (productTitles.isEmpty() ) {
+                    actualResult = searchPage.getNoResultMessageText(); //  lấy thông báo hệ thống
+                } else {
+                    StringBuilder resultBuilder = new StringBuilder();
+                    for (WebElement title : productTitles) {
+                        resultBuilder.append(title.getText().trim()).append(" | ");
+                    }
+                    actualResult = resultBuilder.length() > 0
+                            ? resultBuilder.toString().replaceAll(" \\| $", "")
+                            : "";
                 }
-
-                actualResult = resultBuilder.length() > 0
-                        ? resultBuilder.toString().replaceAll(" \\| $", "")
-                        : ""; // Không có sản phẩm nào hiện ra
 
             } catch (TimeoutException te) {
                 actualResult = ""; // Timeout cũng coi như không có sản phẩm
@@ -68,6 +77,7 @@ public class SearchTest extends BaseTest {
         System.out.println("Đã hoàn tất kiểm thử tìm kiếm.");
         ExcelLogger.openLogFile();
     }
+
 
     private void logResultAndContinue(ExtentTest test, String keyword, String expected, String actual) {
         // Nếu actual là danh sách tiêu đề sản phẩm, kiểm tra có chứa keyword không
@@ -85,6 +95,8 @@ public class SearchTest extends BaseTest {
             test.pass("Keyword: " + keyword + "\nExpected: " + expected + "\nActual: " + actual);
         } else {
             test.fail("Keyword: " + keyword + "\nExpected: " + expected + "\nActual: " + actual);
+            String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "Search_Fail_" + keyword);
+            test.addScreenCaptureFromPath(screenshotPath);
         }
 
         String testTime = java.time.LocalDateTime.now().toString();

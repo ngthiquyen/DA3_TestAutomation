@@ -42,6 +42,7 @@ public class CartTest extends BaseTest {
             } else {
                 String screenshotPath = ScreenshotUtils.takeScreenshot(driver, "CartTest_Fail_ThemSP" );
                 test1.fail("Không thấy thông báo 'Thêm vào giỏ hàng thành công'.").addScreenCaptureFromPath(screenshotPath);
+
             }
 
             // ===== CASE 2: Thay đổi số lượng =====

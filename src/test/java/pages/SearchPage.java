@@ -1,6 +1,10 @@
 package pages;
 
 import org.openqa.selenium.*;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import java.time.Duration;
 import java.util.List;
 
 public class SearchPage {
@@ -29,19 +33,31 @@ public class SearchPage {
         js.executeScript("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", input);
 
         try {
-            Thread.sleep(500);
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
         driver.findElement(searchButton).click();
     }
-
+    public String getHtml5ValidationMessage() {
+        WebElement input = driver.findElement(searchInput);
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        return (String) js.executeScript("return arguments[0].validationMessage;", input);
+    }
     public boolean isNoResultMessageDisplayed() {
         List<WebElement> messages = driver.findElements(noResultMessage);
         return !messages.isEmpty();
     }
-
+    public String getNoResultMessageText() {
+        try {
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            WebElement msgElement = wait.until(ExpectedConditions.visibilityOfElementLocated(noResultMessage));
+            return msgElement.getText().trim();
+        } catch (TimeoutException e) {
+            return "Không tìm thấy sản phẩm nhưng cũng không có thông báo từ hệ thống.";
+        }
+    }
     public List<WebElement> getProductTitles() {
         return driver.findElements(productTitles);
     }
