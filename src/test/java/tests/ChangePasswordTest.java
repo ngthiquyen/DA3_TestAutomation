@@ -36,33 +36,34 @@ public class ChangePasswordTest extends BaseTest {
                 loginPage.login("ngthiquyen102@mail.com", "ngthiquyen102");
 
                 // Truy cập trang đổi mật khẩu
-                driver.get("https://dipsoul.vn/account/changepassword");
                 Thread.sleep(6000);
+                driver.get("https://dipsoul.vn/account/changepassword");
+                Thread.sleep(3000);
+
                 ChangePasswordPage changePage = new ChangePasswordPage(driver);
 
-
+                // Nhập dữ liệu
                 changePage.enterCurrentPassword(oldPassword);
                 changePage.enterNewPassword(newPassword);
                 changePage.enterConfirmPassword(confirmPassword);
+
                 changePage.submitChange();
+                Thread.sleep(5000);
 
-                Thread.sleep(3000); // đợi phản hồi
+                // Kiểm tra actualMessage
                 String actualMessage = "";
-                // Kiểm tra thủ công các trường bị bỏ trống
-                StringBuilder emptyFieldsMsg = new StringBuilder();
-                if (oldPassword.isEmpty()) emptyFieldsMsg.append("Vui lòng điền vào trường này. ");
-                if (newPassword.isEmpty()) emptyFieldsMsg.append("Vui lòng điền vào trường này. ");
-                if (confirmPassword.isEmpty()) emptyFieldsMsg.append("Vui lòng điền vào trường này.");
 
-                if (emptyFieldsMsg.length() > 0) {
-                    actualMessage = emptyFieldsMsg.toString().replaceAll("\\s*\\|\\s*$", "");
+                if (oldPassword.isEmpty()) {
+                    actualMessage = changePage.getHtml5ValidationMessage(changePage.getOldPasswordLocator());
+                } else if (newPassword.isEmpty()) {
+                    actualMessage = changePage.getHtml5ValidationMessage(changePage.getNewPasswordLocator());
+                } else if (confirmPassword.isEmpty()) {
+                    actualMessage = changePage.getHtml5ValidationMessage(changePage.getConfirmPasswordLocator());
                 } else {
-                    // Nếu không bị bỏ trống, lấy thông báo từ hệ thống
                     actualMessage = changePage.getAllErrorMessages();
-                   if (actualMessage.isEmpty()) {
-                       actualMessage = changePage.getSuccessMessage();
-                   }
-
+                    if (actualMessage.isEmpty()) {
+                        actualMessage = changePage.getSuccessMessage();
+                    }
                 }
 
                 // So sánh kết quả
@@ -73,26 +74,26 @@ public class ChangePasswordTest extends BaseTest {
                 } else {
                     test.fail("Thất bại\nExpected: " + expectedMessage + "\nActual: " + actualMessage);
                 }
-
-                String[] headers = {"OldPassword", "NewPassword", "ConfirmPassword", "Expected", "Actual", "Status"};
-                String[] values = {oldPassword, newPassword, confirmPassword, expectedMessage, actualMessage, status};
+                String testTime = java.time.LocalDateTime.now().toString();
+                String[] headers = {"OldPassword", "NewPassword", "ConfirmPassword", "Expected", "Actual", "Status","Time"};
+                String[] values = {oldPassword, newPassword, confirmPassword, expectedMessage, actualMessage, status, testTime};
                 ExcelLogger.logCustomRow("ChangePassword", headers, values);
 
-                // Đăng xuất sau mỗi lượt test
+                // Logout sau mỗi test
                 driver.get("https://dipsoul.vn/account/logout");
 
             } catch (Exception e) {
                 e.printStackTrace();
-                test.fail("Exception: " + e.getMessage());
-
-                String[] headers = {"OldPassword", "NewPassword", "ConfirmPassword", "Expected", "Actual", "Status"};
-                String[] values = {oldPassword, newPassword, confirmPassword, expectedMessage, "Exception", "Fail"};
+                test.fail(" Exception: " + e.getMessage());
+                String testTime = java.time.LocalDateTime.now().toString();
+                String[] headers = {"OldPassword", "NewPassword", "ConfirmPassword", "Expected", "Actual", "Status","Time"};
+                String[] values = {oldPassword, newPassword, confirmPassword, expectedMessage, "Exception", "Fail",testTime};
                 ExcelLogger.logCustomRow("ChangePassword", headers, values);
 
-                // Đảm bảo luôn logout nếu có lỗi để chuyển tiếp test khác
                 try {
                     driver.get("https://dipsoul.vn/account/logout");
-                } catch (Exception ignore) {}
+                } catch (Exception ignore) {
+                }
             }
         }
 
