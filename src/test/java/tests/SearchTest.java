@@ -37,7 +37,6 @@ public class SearchTest extends BaseTest {
                 continue;
 
             }
-
             try {
                 WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
                 wait.until(ExpectedConditions.visibilityOf(searchPage.getSearchInput()));
@@ -45,7 +44,7 @@ public class SearchTest extends BaseTest {
                 String currentUrl = driver.getCurrentUrl();
                 searchPage.searchProduct(keyword);
                 wait.until(ExpectedConditions.not(ExpectedConditions.urlToBe(currentUrl)));
-// Chờ 1 trong 2 điều kiện: có sản phẩm hoặc có thông báo không tìm thấy
+            // Chờ 1 trong 2 điều kiện: có sản phẩm hoặc có thông báo không tìm thấy
                 wait.until(driver1 ->
                         !searchPage.getProductTitles().isEmpty() || searchPage.isNoResultMessageDisplayed()
 

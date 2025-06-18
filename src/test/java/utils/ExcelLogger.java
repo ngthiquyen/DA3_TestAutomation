@@ -27,6 +27,38 @@ public class ExcelLogger {
             throw new RuntimeException("Không thể khởi tạo workbook cho ExcelLogger.");
         }
     }
+    /**
+     * Hàm dùng cho các test như SearchTest – ghi log với tiêu đề và giá trị tùy chỉnh
+     */
+    public static void logCustomRow(String sheetName, String[] headers, String[] values) {
+        try {
+            Sheet sheet = workbook.getSheet(sheetName);
+            boolean isNewSheet = false;
+
+            if (sheet == null) {
+                sheet = workbook.createSheet(sheetName);
+                isNewSheet = true;
+            }
+
+            if (isNewSheet) {
+                Row headerRow = sheet.createRow(0);
+                for (int i = 0; i < headers.length; i++) {
+                    headerRow.createCell(i).setCellValue(headers[i]);
+                }
+            }
+
+            int currentRow = sheet.getLastRowNum() + 1;
+            Row row = sheet.createRow(currentRow);
+
+            for (int i = 0; i < values.length; i++) {
+                row.createCell(i).setCellValue(values[i]);
+            }
+
+            save();
+        } catch (Exception e) {
+            System.out.println("Không thể ghi log tuỳ chỉnh: " + e.getMessage());
+        }
+    }
 
     /**
      * Hàm dùng cho LoginTest – ghi log gồm 6 cột cố định
@@ -60,39 +92,6 @@ public class ExcelLogger {
             save();
         } catch (Exception e) {
             System.out.println("Không thể ghi log vào Excel: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Hàm dùng cho các test như SearchTest – ghi log với tiêu đề và giá trị tùy chỉnh
-     */
-    public static void logCustomRow(String sheetName, String[] headers, String[] values) {
-        try {
-            Sheet sheet = workbook.getSheet(sheetName);
-            boolean isNewSheet = false;
-
-            if (sheet == null) {
-                sheet = workbook.createSheet(sheetName);
-                isNewSheet = true;
-            }
-
-            if (isNewSheet) {
-                Row headerRow = sheet.createRow(0);
-                for (int i = 0; i < headers.length; i++) {
-                    headerRow.createCell(i).setCellValue(headers[i]);
-                }
-            }
-
-            int currentRow = sheet.getLastRowNum() + 1;
-            Row row = sheet.createRow(currentRow);
-
-            for (int i = 0; i < values.length; i++) {
-                row.createCell(i).setCellValue(values[i]);
-            }
-
-            save();
-        } catch (Exception e) {
-            System.out.println("Không thể ghi log tuỳ chỉnh: " + e.getMessage());
         }
     }
 

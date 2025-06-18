@@ -17,14 +17,7 @@ public class LoginPage {
         this.driver = driver;
     }
 
-    // Actions
-    public void login(String username, String password) {
-        getEmailInput().clear();
-        getPasswordInput().clear();
-        getEmailInput().sendKeys(username);
-        getPasswordInput().sendKeys(password);
-        getLoginButton().click();
-    }
+
 
     // Elements
     public WebElement getEmailInput() {
@@ -53,5 +46,15 @@ public class LoginPage {
 
     public WebElement getLoginErrorMessageElement() {
         return driver.findElement(loginErrorMessage);
+    }
+
+
+    // Actions
+    public void login(String username, String password) {
+        getEmailInput().clear();
+        getPasswordInput().clear();
+        getEmailInput().sendKeys(username);
+        getPasswordInput().sendKeys(password);
+        getLoginButton().click();
     }
 }

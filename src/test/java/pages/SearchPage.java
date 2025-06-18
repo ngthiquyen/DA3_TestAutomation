@@ -13,7 +13,7 @@ public class SearchPage {
     private By searchInput = By.xpath("//form[contains(@class, 'blog-search-form')]//input[@type='text']");
     private By searchButton = By.xpath("//form[@class='blog-search-form input-group search-bar']//button[@title='Tìm kiếm']");
     private By noResultMessage = By.xpath("//p[contains(text(),'Không tìm thấy bất kỳ kết quả nào với từ khóa trên')]");
-    private By productTitles = By.cssSelector(".product-name"); // ✅ Tiêu đề sản phẩm
+    private By productTitles = By.cssSelector(".product-name"); // Tiêu đề sản phẩm
 
     public SearchPage(WebDriver driver) {
         this.driver = driver;
