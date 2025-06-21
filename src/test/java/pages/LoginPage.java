@@ -17,8 +17,6 @@ public class LoginPage {
         this.driver = driver;
     }
 
-
-
     // Elements
     public WebElement getEmailInput() {
         return driver.findElement(emailField);
